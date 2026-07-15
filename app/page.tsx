@@ -1,836 +1,883 @@
-"use client";
+'use client';
 
-import React, { useState, useTransition, Suspense } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useSearchParams, useRouter } from "next/navigation";
-import { 
-  supabase, 
-  isSupabaseConfigured, 
-  fallbackProjects, 
-  type ProjectDefinition 
-} from "../lib/supabase";
-import { useApp, type Theme, type Lang } from "./providers";
-import { cn } from "../lib/utils";
+import { useState, useEffect } from 'react';
 import { 
   GraduationCap, 
-  FileText, 
-  Layers, 
   HeartPulse, 
   Building2, 
-  ShoppingBag,
-  Sun,
-  Moon,
+  ShoppingBag, 
+  Sun, 
+  Moon, 
+  Palette, 
+  Globe, 
+  Send, 
+  X, 
+  CheckCircle2, 
+  ShieldCheck, 
+  ExternalLink, 
+  ArrowLeftRight,
   Sparkles,
-  Languages,
-  Clock,
-  Shield,
-  ArrowRight,
-  ExternalLink,
-  Loader2,
-  Check,
-  AlertCircle,
-  Lock,
-  ChevronLeft,
-  ChevronRight,
-  Database,
-  Eye,
-  X,
-  Smartphone,
-  Cpu
-} from "lucide-react";
+  Layers,
+  MessageSquare,
+  Building,
+  Briefcase
+} from 'lucide-react';
 
-// Lucide icon mapping to render dynamic icons safely
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  GraduationCap: GraduationCap,
-  FileText: FileText,
-  Orbit: Layers,
-  HeartPulse: HeartPulse,
-  Building2: Building2,
-  ShoppingBag: ShoppingBag,
-};
+// ==========================================
+// 1. DATA-DRIVEN CONFIGURATION (DATA MATRIX)
+// ==========================================
 
-function ProjectIcon({ name, className }: { name: string; className?: string }) {
-  const IconComponent = iconMap[name] || Sparkles;
-  return <IconComponent className={className} />;
-}
-
-// Full translation dictionary to ensure absolute content decoupling
-const translations = {
+const LANDING_CONFIG = {
   ar: {
-    brand: "ذكاء سهل",
-    tagline: "بوابة التحول الرقمي السيادي",
-    heroBadge: "بوابة موحدة ومؤمنة بالكامل للأنظمة الوطنية",
-    heroTitlePrefix: "التحول الرقمي ",
-    heroTitleHighlight: "السيادي والآمن",
-    heroTitleSuffix: " للمستقبل",
-    heroSubtitle: "منصة سحابية متقدمة متعددة المستأجرين مبنية لإدارة وتشغيل الأنظمة التعليمية والصحية والعقارية والتجارية بسيادة تامة.",
-    ctaExplore: "استكشف الخدمات والحلول",
-    ctaWatchVideo: "فيديو تعريفي",
-    statusConnected: "قاعدة البيانات متصلة بشكل نشط وآمن",
-    statusDemo: "الوضع التجريبي: نعرض بيانات هيكلية مشفرة لعدم تهيئة المفاتيح",
-    
-    sectionTitle: "حلولنا المتكاملة للقطاعات الوطنية",
-    sectionSubtitle: "استكشف بوابات الخدمات الرقمية المؤمنة والمصممة خصيصاً لتلبية التطلعات والمقاييس السيادية.",
-    
-    all: "جميع القطاعات",
-    edu: "القطاع التعليمي",
-    health: "القطاع الصحي",
-    realestate: "القطاع العقاري",
-    commerce: "القطاع التجاري",
-    
-    comingSoon: "قريباً",
-    activeStatus: "نشط ومتاح حالياً",
-    launchService: "ابدأ الخدمة",
-    showDetails: "عرض التفاصيل والمميزات",
-    operationalStatus: "الحالة التشغيلية للمستأجر",
-    coreSystem: "نظام سيادي مخصص",
-    keyFeatures: "أبرز مميزات الخدمة والأنظمة الفرعية",
-    
-    valuesTitle: "ركائز وقيم وطنية نعتز بها",
-    valuesSubtitle: "نعمل بأعلى مستويات المعايير الهندسية لضمان الريادة والاستدامة.",
-    
-    val1Title: "السيادة الكاملة على البيانات",
-    val1Desc: "حفظ وتشفير بيانات المواطنين والمنشآت داخل بنية تحتية محلية مستقلة تماماً وممتثلة للأنظمة الوطنية.",
-    val2Title: "قابلية توسع متعددة المستأجرين",
-    val2Desc: "معمارية فريدة تخدم آلاف المستأجرين بمرونة بالغة مع عزل كامل ومستقل للبيانات والواجهات المخصصة.",
-    val3Title: "كفاءة واستمرارية تشغيلية",
-    val3Desc: "سرعة استجابة فائقة، دعم للعمل دون اتصال، وأنظمة احتياطية ذكية تضمن استمرارية الأعمال 24/7.",
-    
-    detailsTitle: "تفاصيل النظام والمميزات الفرعية للخدمة",
-    systemSlug: "معرف النظام الفرعي (Slug)",
-    sectorName: "اسم القطاع المسجل",
-    close: "إغلاق",
-    launchPortal: "الدخول لبوابة الخدمة الآمنة (SSO)",
-    loadingData: "جاري جلب تهيئة الأنظمة الفيدرالية...",
-    retryButton: "إعادة المحاولة",
-    noDataFound: "لم يتم العثور على أنظمة فرعية مفعّلة حالياً.",
-    activeUsersLabel: "المستأجرين النشطين",
-    securityAuditLabel: "مستوى الأمان والتحقق",
-    certifiedSovereign: "ممتثل وموثق سيادياً",
-    
-    footerCopyright: "جميع الحقوق محفوظة © ٢٠٢٦ منصة ذكاء سهل",
-    footerCompliance: "ممتثل لضوابط الأمن السيبراني الوطنية ومعايير التحول الرقمي السيادي المتكامل.",
-    compliancePrivacy: "سياسة الخصوصية السيادية",
-    complianceTerms: "شروط الاستخدام والاتفاقيات",
-    complianceSLA: "اتفاقية مستوى الخدمة الرقمية",
+    meta: {
+      title: "ذكاء سهل",
+      subtitle: "بوابة التحول الرقمي السيادي المتكامل",
+      headline: "بوابتك السحابية الآمنة لتمكين قطاعات الدولة والمؤسسات",
+      description: "حلول رقمية مترابطة وبنية تحتية سحابية مستقلة متوافقة بالكامل مع بروتوكولات الأمان والمعايير المعتمدة لشركة Meta لتقديم خدمات WhatsApp للأعمال.",
+      sovereignBadge: "منصة وطنية سيادية معتمدة للتحول الرقمي",
+      metaVerificationText: "شريك تقني معتمد لحلول WhatsApp Business API. نلتزم بكافة ضوابط سياسات Meta للاستخدام العادل وحماية وتشفير البيانات السيادية.",
+      businessInfo: {
+        registeredName: "مؤسسة ذكاء سهل لتقنية المعلومات والحلول الرقمية",
+        licenseNumber: "رقم السجل التجاري الموحد: 1010729352",
+        address: "المنطقة الرقمية المركزية، الرياض، المملكة العربية السعودية",
+      }
+    },
+    cta: {
+      primaryText: "تصفح المشاريع المفعّلة",
+      secondaryText: "تفاصيل بروتوكول Meta والأمان",
+    },
+    stats: [
+      { value: "100%", label: "سيادة وتشفير كامل للبيانات" },
+      { value: "4 قطاعات", label: "بنية تحتية موحدة سحابياً" },
+      { value: "Meta Partner", label: "تكامل مباشر مع WhatsApp API" },
+    ],
+    sectorsTitle: "القطاعات الرقمية الموحدة",
+    sectorsSubtitle: "تكامل خدماتنا السحابية لتحقيق قفزة نوعية في تسيير أعمالك بكفاءة وأمان رقمي متكامل.",
+    sectors: [
+      {
+        id: 'education',
+        name: 'قطاع التعليم الرقمي',
+        description: 'حلول ذكية لتمكين الكادر التعليمي والطلاب من خلال فضاءات تعليمية سحابية متكاملة وسهلة الاستخدام.',
+        iconName: 'GraduationCap',
+        isActive: true,
+        linkUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects',
+        statusBadge: 'مفعّل ونشط',
+      },
+      {
+        id: 'health',
+        name: 'قطاع الرعاية الصحية الذكية',
+        description: 'بوابات صحية موحدة تساهم في تسريع التحول الرقمي الطبي وتسهيل تتبع السجلات والخدمات العلاجية.',
+        iconName: 'HeartPulse',
+        isActive: false,
+        statusBadge: 'قيد التطوير',
+      },
+      {
+        id: 'real-estate',
+        name: 'قطاع العقارات والمباني السيادية',
+        description: 'أنظمة ذكية لإدارة وتتبع الأصول العقارية والملكيات وتوثيق البيانات بنظام عقاري متكامل وعالي الأمان.',
+        iconName: 'Building2',
+        isActive: false,
+        statusBadge: 'قيد التطوير',
+      },
+      {
+        id: 'commerce',
+        name: 'قطاع التجارة والأعمال المترابطة',
+        description: 'منصات تجارية سحابية لربط المتاجر وإدارة المبيعات وسلاسل التوريد مع الدعم المتكامل لعمليات الدفع.',
+        iconName: 'ShoppingBag',
+        isActive: false,
+        statusBadge: 'قيد التطوير',
+      },
+    ],
+    modal: {
+      title: "القطاع قيد التحضير والإنشاء",
+      description: "نحن نعمل جاهدين بالتعاون مع شركائنا التقنيين لتجهيز هذا القطاع الرقمي بأعلى معايير الأمان.",
+      motivation: "نحب أن نسمع صوتك! شاركنا رؤيتك الفريدة ومقترحاتك حول ما تطمح لرؤيته في هذا القطاع السحابي لتلبي احتياجاتك.",
+      placeholderSuggestion: "يرجى كتابة أفكارك ومقترحاتك هنا...",
+      placeholderContact: "البريد الإلكتروني أو رقم الهاتف لغرض التواصل الإخباري...",
+      contactLabel: "وسيلة التواصل لإبلاغك بأحدث التطورات:",
+      submitBtn: "إرسال المقترحات للتطوير",
+      submittingBtn: "جاري تأمين الإرسال...",
+      successTitle: "تم استلام أفكارك بنجاح!",
+      successDesc: "شكراً لمساهمتك البنّاءة في تصميم مستقبل التحول الرقمي السيادي. سنقوم بالتواصل معك بمجرد إتاحة الخدمة وتفعيل القطاع.",
+      closeBtn: "إغلاق",
+    },
+    legal: {
+      copyright: "جميع الحقوق محفوظة © ٢٠٢٦ منصة ذكاء سهل للخدمات الرقمية السحابية.",
+      metaDisclaimer: "ملاحظة قانونية: WhatsApp Business API هي علامة تجارية مسجلة لشركة Meta Platforms, Inc. استخدامها في هذه المنصة يخضع لشروط الاستخدام وسياسات الخصوصية المعتمدة لشركة Meta.",
+      links: [
+        { id: "privacy", text: "سياسة الخصوصية وحماية البيانات", title: "سياسة الخصوصية وحماية البيانات", content: "تلتزم منصة ذكاء سهل بحفظ خصوصية وتشفير كافة البيانات الخاصة بالمستخدمين والمؤسسات، متطابقة مع ضوابط حوكمة البيانات الوطنية ومقاييس الأمان لدى Meta." },
+        { id: "terms", text: "شروط الاستخدام والأمان السيادي", title: "شروط الاستخدام والأمان السيادي", content: "تخضع كافة المعاملات البرمجية والخدمات السحابية عبر ذكاء سهل لشروط الاستخدام السيادية التي تمنع الاستغلال غير المصرح به وتدعم تكامل الأنظمة بكفاءة." },
+        { id: "meta-compliance", text: "دليل الامتثال لسياسات Meta", title: "دليل الامتثال لسياسات Meta", content: "تمت مراجعة المنصة والتأكد من مطابقتها لسياسات Meta Business Verification وشروط WhatsApp Business API للاستخدام العادل والتواصل المؤسسي الآمن." },
+        { id: "business-license", text: "السجل والترخيص التجاري", title: "بيانات التراخيص والنشاط التجاري", content: "المنصة تدار بموجب السجل التجاري رقم: 1010729352 لـ (مؤسسة ذكاء سهل لتقنية المعلومات والحلول الرقمية) المرخصة رسمياً في المملكة العربية السعودية." }
+      ]
+    }
   },
   en: {
-    brand: "Thakaa Sahl",
-    tagline: "Sovereign Digital Transformation Portal",
-    heroBadge: "Unified & Fully Secured Sovereign National Gateway",
-    heroTitlePrefix: "Sovereign & Secure ",
-    heroTitleHighlight: "Digital Transformation",
-    heroTitleSuffix: " for the Future",
-    heroSubtitle: "An advanced multi-tenant cloud platform engineered to operate educational, health, real estate, and commercial systems under full national sovereignty.",
-    ctaExplore: "Explore Secure Solutions",
-    ctaWatchVideo: "Introductory Video",
-    statusConnected: "Connected to Secure Central Database",
-    statusDemo: "Demo Mode: Displaying encrypted structural data (Env Keys Pending)",
-    
-    sectionTitle: "Integrated Solutions for National Sectors",
-    sectionSubtitle: "Explore secure digital service portals designed specifically to meet strategic sovereign goals and parameters.",
-    
-    all: "All Sectors",
-    edu: "Education Sector",
-    health: "Healthcare Sector",
-    realestate: "Real Estate",
-    commerce: "Commerce & Business",
-    
-    comingSoon: "Coming Soon",
-    activeStatus: "Active & Available",
-    launchService: "Launch Service",
-    showDetails: "View Details & Features",
-    operationalStatus: "Tenant Operational Status",
-    coreSystem: "Sovereign Custom System",
-    keyFeatures: "Key Service Features & Subsystems",
-    
-    valuesTitle: "Sovereign Pillars We Stand For",
-    valuesSubtitle: "Engineering the future of national services with unprecedented security, speed, and integrity.",
-    
-    val1Title: "Full Data Sovereignty",
-    val1Desc: "Citizen and institutional data fully stored, encrypted, and governed in highly secured localized cloud environments.",
-    val2Title: "Multi-Tenant Scalability",
-    val2Desc: "A robust scalable architecture serving thousands of individual tenants with complete database and view isolation.",
-    val3Title: "Efficiency & Resilient Continuity",
-    val3Desc: "Blazing fast speeds, offline service worker capability, and automatic backups guaranteeing 24/7 business continuity.",
-    
-    detailsTitle: "System Configurations & Sub-features",
-    systemSlug: "Subsystem Identifier (Slug)",
-    sectorName: "Registered Sector Name",
-    close: "Close Window",
-    launchPortal: "Access Secure Service Portal (SSO)",
-    loadingData: "Fetching federal systems configurations...",
-    retryButton: "Retry Fetch",
-    noDataFound: "No active subsystems found in current node.",
-    activeUsersLabel: "Active Tenants",
-    securityAuditLabel: "Security & Audit Level",
-    certifiedSovereign: "Sovereign Certified",
-    
-    footerCopyright: "All Rights Reserved © 2026 Thakaa Sahl Platform",
-    footerCompliance: "Fully compliant with national cybersecurity rules, federal standards, and sovereign cloud frameworks.",
-    compliancePrivacy: "Sovereign Privacy Policy",
-    complianceTerms: "Terms of Safe Use",
-    complianceSLA: "Service Level Agreement (SLA)",
+    meta: {
+      title: "Easy Intellect",
+      subtitle: "The Sovereign Unified Digital Portal",
+      headline: "Your Secure Cloud Portal for State Sectors & Digital Enterprises",
+      description: "Connected digital solutions and sovereign independent cloud infrastructure fully compliant with Meta security protocols and standards for WhatsApp Business API services.",
+      sovereignBadge: "Certified National Sovereign Digital Platform",
+      metaVerificationText: "Certified technical partner for WhatsApp Business API. Fully committed to Meta's privacy policies and national data encryption protocols.",
+      businessInfo: {
+        registeredName: "Easy Intellect Enterprise for Information Technology",
+        licenseNumber: "Unified Commercial Registration ID: 1010729352",
+        address: "Central Digital District, Riyadh, Kingdom of Saudi Arabia",
+      }
+    },
+    cta: {
+      primaryText: "Browse Active Projects",
+      secondaryText: "Meta Protocol & Security Details",
+    },
+    stats: [
+      { value: "100%", label: "Data Sovereignty & Encryption" },
+      { value: "4 Sectors", label: "Unified Cloud Infrastructure" },
+      { value: "Meta Partner", label: "Direct WhatsApp API Integration" },
+    ],
+    sectorsTitle: "Unified Digital Sectors",
+    sectorsSubtitle: "Seamlessly integrate our cloud services to achieve a qualitative leap in your business operations with absolute digital efficiency and safety.",
+    sectors: [
+      {
+        id: 'education',
+        name: 'Digital Education Sector',
+        description: 'Smart solutions empowering educators and students through integrated, easy-to-use cloud environments.',
+        iconName: 'GraduationCap',
+        isActive: true,
+        linkUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects',
+        statusBadge: 'Active & Live',
+      },
+      {
+        id: 'health',
+        name: 'Smart Healthcare Sector',
+        description: 'Unified health portals driving digital transformation and medical record tracking securely.',
+        iconName: 'HeartPulse',
+        isActive: false,
+        statusBadge: 'Under Development',
+      },
+      {
+        id: 'real-estate',
+        name: 'Sovereign Real Estate Sector',
+        description: 'Intelligent systems for tracking property registry assets and secure real estate transactions.',
+        iconName: 'Building2',
+        isActive: false,
+        statusBadge: 'Under Development',
+      },
+      {
+        id: 'commerce',
+        name: 'Unified Commerce Sector',
+        description: 'Sovereign cloud commerce platforms linking merchants and supply chains with integrated payment gateways.',
+        iconName: 'ShoppingBag',
+        isActive: false,
+        statusBadge: 'Under Development',
+      },
+    ],
+    modal: {
+      title: "Sector is Under Construction",
+      description: "We are working hard with our technical partners to launch this digital sector meeting the highest standards of safety.",
+      motivation: "We would love to hear your voice! Share your unique vision and suggestions for what you hope to see in this cloud sector.",
+      placeholderSuggestion: "Please type your ideas and suggestions here...",
+      placeholderContact: "Email or phone number for update notifications...",
+      contactLabel: "Contact method to inform you about updates:",
+      submitBtn: "Submit Suggestions",
+      submittingBtn: "Securing Submission...",
+      successTitle: "Suggestions Received!",
+      successDesc: "Thank you for your constructive contribution in shaping the future of sovereign digital transformation. We will contact you once the sector is active.",
+      closeBtn: "Close",
+    },
+    legal: {
+      copyright: "All rights reserved © 2026 Easy Intellect Cloud Digital Services.",
+      metaDisclaimer: "Legal Notice: WhatsApp Business API is a registered trademark of Meta Platforms, Inc. Usage within this platform is governed by Meta's approved terms of service and privacy rules.",
+      links: [
+        { id: "privacy", text: "Privacy Policy & Data Shield", title: "Privacy Policy & Data Shield", content: "Easy Intellect is committed to protecting the privacy and encryption of all user and institutional data, complying with national data governance guidelines and Meta security parameters." },
+        { id: "terms", text: "Sovereign Terms of Service", title: "Sovereign Terms of Service", content: "All software operations and cloud services via Easy Intellect are subject to sovereign terms of service that prevent unauthorized exploitation and ensure secure system integration." },
+        { id: "meta-compliance", text: "Meta Compliance Guidelines", title: "Meta Compliance Guidelines", content: "The platform has been audited and verified compliant with Meta Business Verification rules and WhatsApp Business API terms for institutional communications." },
+        { id: "business-license", text: "Commercial Registry & License", title: "Licensing & Commercial Information", content: "The platform is operated under commercial license registration ID: 1010729352 for (Easy Intellect Enterprise for Information Technology) officially registered in Saudi Arabia." }
+      ]
+    }
   }
 };
 
-function LandingPageContent() {
-  const { theme, lang, toggleTheme, toggleLang } = useApp();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [activeCategory, setActiveCategory] = useState<"all" | "edu" | "health" | "realestate" | "commerce">("all");
-  const [selectedProject, setSelectedProject] = useState<ProjectDefinition | null>(null);
-  const [isPending, startTransition] = useTransition();
+// ==========================================
+// 2. ADS SIMULATOR CONFIGURATION (CENTRAL DB MOCKUP)
+// ==========================================
 
-  // Selected service from URL query param to allow direct link sharing
-  const activeServiceSlug = searchParams.get("service");
+interface Ad {
+  id: string;
+  title: string;
+  description: string;
+  targetUrl: string;
+}
 
-  // React Query to fetch data from Supabase (targeting 'core' schema)
-  const { data: projects = [], isLoading, error, refetch } = useQuery<ProjectDefinition[]>({
-    queryKey: ["project_definitions"],
-    queryFn: async () => {
-      if (!isSupabaseConfigured) {
-        // Mock network delay for premium visual load feel
-        await new Promise((resolve) => setTimeout(resolve, 600));
-        return fallbackProjects;
+const ADS_DATABASE: Record<'ar' | 'en', Record<'top' | 'bottom', Ad[]>> = {
+  ar: {
+    top: [
+      {
+        id: 'ad-meta-partner',
+        title: 'تكامل فوري لخدمات WhatsApp للأعمال',
+        description: 'وفر قنوات تواصل رسمية لجمهورك متصلة بأنظمتك المركزية عبر ربط Meta API المباشر بنسبة تفعيل 100%.',
+        targetUrl: '#whatsapp-info'
       }
-      
-      const { data, error: fetchError } = await supabase
-        .from("project_definitions")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (fetchError) {
-        console.error("Supabase query error:", fetchError);
-        throw fetchError;
+    ],
+    bottom: [
+      {
+        id: 'ad-education-special',
+        title: 'بوابة التعليم المفعّلة الآن',
+        description: 'ابدأ تصفح المشاريع المفعّلة في قطاع التعليم السحابي لتجربة نظام إدارة الفصول السيادية الذكية.',
+        targetUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects'
       }
-      return data as ProjectDefinition[];
-    },
-  });
-
-  const dict = translations[lang];
-
-  // Map category filter on memory
-  const filteredProjects = projects.filter((proj) => {
-    if (activeCategory === "all") return true;
-    if (activeCategory === "edu") return proj.project_slug.startsWith("edu_");
-    if (activeCategory === "health") return proj.project_slug.startsWith("health_");
-    if (activeCategory === "realestate") return proj.project_slug.startsWith("real_estate") || proj.project_slug.includes("realestate");
-    if (activeCategory === "commerce") return proj.project_slug.startsWith("commerce_") || proj.project_slug.includes("commerce");
-    return true;
-  });
-
-  // Handle opening details
-  const handleOpenDetails = (proj: ProjectDefinition) => {
-    setSelectedProject(proj);
-    // Push slug to URL query parameter safely using transitions
-    startTransition(() => {
-      const url = new URL(window.location.href);
-      url.searchParams.set("service", proj.project_slug);
-      router.push(url.pathname + url.search, { scroll: false });
-    });
-  };
-
-  // Close details and remove query param
-  const handleCloseDetails = () => {
-    setSelectedProject(null);
-    startTransition(() => {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("service");
-      router.push(url.pathname, { scroll: false });
-    });
-  };
-
-  // Check if there is an active direct link via search parameters
-  React.useEffect(() => {
-    if (activeServiceSlug && projects.length > 0) {
-      const matched = projects.find((p) => p.project_slug === activeServiceSlug);
-      if (matched) {
-        const timer = setTimeout(() => {
-          setSelectedProject(matched);
-        }, 0);
-        return () => clearTimeout(timer);
+    ]
+  },
+  en: {
+    top: [
+      {
+        id: 'ad-meta-partner',
+        title: 'Instant WhatsApp Business Integration',
+        description: 'Provide official communication channels for your audience connected to central systems via Meta API.',
+        targetUrl: '#whatsapp-info'
       }
-    }
-  }, [activeServiceSlug, projects]);
+    ],
+    bottom: [
+      {
+        id: 'ad-education-special',
+        title: 'Active Education Portal Live Now',
+        description: 'Start exploring active projects in the digital education sector to experience sovereign cloud management.',
+        targetUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects'
+      }
+    ]
+  }
+};
+
+// ==========================================
+// 3. AD RENDERER COMPONENT (BLIND QUEUE INJECTION) - TOP LEVEL DEFINITION
+// ==========================================
+const Ad_Renderer_Component = ({ placement, lang }: { placement: 'top' | 'bottom'; lang: 'ar' | 'en' }) => {
+  // جلب الإعلانات النشطة من طابور العرض الإعلاني الديناميكي (Ads Engine) المتطابق مع قاعدة البيانات
+  const currentAdQueue = ADS_DATABASE[lang][placement];
+  if (!currentAdQueue || currentAdQueue.length === 0) return null;
+
+  const ad = currentAdQueue[0]; // سحب الإعلان المتاح بدون تفعيل تشغيل الفيديوهات حفاظاً على موارد المستأجرين
 
   return (
-    <div className="min-h-screen relative flex flex-col transition-colors duration-300">
-      
-      {/* Decorative Blur Backgrounds representing Glassmorphism Glow */}
-      <div className="absolute top-0 left-1/4 w-[45vw] h-[45vw] rounded-full pointer-events-none opacity-40 blur-[120px] bg-radial" 
-           style={{ backgroundImage: 'var(--hero-glow)' }} />
-      <div className="absolute bottom-20 right-1/4 w-[35vw] h-[35vw] rounded-full pointer-events-none opacity-30 blur-[120px] bg-radial" 
-           style={{ backgroundImage: 'var(--hero-glow)' }} />
+    <div className="w-full max-w-6xl mx-auto px-4 my-8" id={`ad-holder-${placement}`}>
+      <div className="glass-card relative overflow-hidden rounded-2xl p-5 md:p-6 flex flex-col md:flex-row items-center justify-between gap-5 border-r-4 border-r-pink-500 dark:border-r-blue-500">
+        <span className="absolute top-2 left-3 text-[9px] uppercase tracking-wider text-slate-400/80 bg-slate-500/10 px-2 py-0.5 rounded border border-slate-500/10">
+          {lang === 'ar' ? 'مساحة إعلانية مدمجة' : 'Central Ad Node'}
+        </span>
+        <div className="text-right space-y-1">
+          <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-pink-500 dark:bg-blue-400 animate-pulse"></span>
+            {ad.title}
+          </h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
+            {ad.description}
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            if (ad.targetUrl.startsWith('http')) {
+              window.open(ad.targetUrl, '_blank');
+            } else {
+              const el = document.querySelector(ad.targetUrl);
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }
+          }}
+          className="glass-button text-xs font-semibold py-2.5 px-5 rounded-xl border border-white/10 shadow-sm whitespace-nowrap cursor-pointer hover:bg-slate-500/10"
+        >
+          {lang === 'ar' ? 'زيارة العرض' : 'View Offer'}
+        </button>
+      </div>
+    </div>
+  );
+};
 
-      {/* HEADER SECTION WITH NAVIGATION AND THEME SWITCHER */}
-      <header id="platform-header" className="sticky top-0 z-40 w-full glass-panel border-b border-opacity-50 transition-all duration-300 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+export default function LandingPage() {
+  const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'pink'>('dark');
+  const [lang, setLang] = useState<'ar' | 'en'>('ar');
+
+  // Modal Interaction States
+  const [selectedSector, setSelectedSector] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [suggestion, setSuggestion] = useState('');
+  const [contact, setContact] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Legal Popups Modal State
+  const [activeLegalModal, setActiveLegalModal] = useState<{title: string, content: string} | null>(null);
+
+  // Initialize and load configurations
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMounted(true);
+      const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'pink';
+      const storedLang = localStorage.getItem('lang') as 'ar' | 'en';
+      
+      if (storedTheme) {
+        setTheme(storedTheme);
+        document.documentElement.setAttribute('data-theme', storedTheme);
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+
+      if (storedLang) {
+        setLang(storedLang);
+        document.documentElement.dir = storedLang === 'ar' ? 'rtl' : 'ltr';
+        document.documentElement.lang = storedLang;
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const changeTheme = (newTheme: 'light' | 'dark' | 'pink') => {
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  const changeLang = (newLang: 'ar' | 'en') => {
+    setLang(newLang);
+    localStorage.setItem('lang', newLang);
+    document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = newLang;
+  };
+
+  // Handle Sector Actions
+  const handleSectorClick = (sector: any) => {
+    if (sector.isActive && sector.linkUrl) {
+      // Direct sovereign transition for active sectors
+      window.open(sector.linkUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      // Open dynamic glass feedback portal for inactive sectors
+      setSelectedSector(sector);
+      setSuggestion('');
+      setContact('');
+      setIsSubmitted(false);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleSuggestionSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!suggestion || !contact) return;
+
+    setIsSubmitting(true);
+    // Simulating database storage (core table: project_definitions & user requests)
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSubmitted(true);
+      
+      // Save suggestion in localStorage as simulated logging of user feedback
+      const currentSubmissions = JSON.parse(localStorage.getItem('sector_suggestions') || '[]');
+      currentSubmissions.push({
+        sectorId: selectedSector.id,
+        sectorName: selectedSector.name,
+        suggestion,
+        contact,
+        timestamp: new Date().toISOString()
+      });
+      localStorage.setItem('sector_suggestions', JSON.stringify(currentSubmissions));
+    }, 1200);
+  };
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#090d16] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  const currentCopy = LANDING_CONFIG[lang];
+
+  // Helper component to render icons dynamically
+  const renderSectorIcon = (iconName: string) => {
+    const iconProps = { className: "w-8 h-8 text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300" };
+    switch (iconName) {
+      case 'GraduationCap':
+        return <GraduationCap {...iconProps} />;
+      case 'HeartPulse':
+        return <HeartPulse {...iconProps} />;
+      case 'Building2':
+        return <Building2 {...iconProps} />;
+      case 'ShoppingBag':
+        return <ShoppingBag {...iconProps} />;
+      default:
+        return <Layers {...iconProps} />;
+    }
+  };
+
+  // Note: Ad_Renderer_Component is defined at the top level to conform with React best practices
+
+  return (
+    <div className="min-h-screen flex flex-col relative transition-colors duration-300">
+      
+      {/* Background Glows for Sovereign Aesthetics */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 dark:bg-blue-600/5 blur-[120px] pointer-events-none animate-pulse-slow"></div>
+      <div className="absolute bottom-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-pink-500/10 dark:bg-pink-600/5 blur-[120px] pointer-events-none animate-pulse-slow"></div>
+
+      {/* ==========================================
+          HEADER SECTION
+         ========================================== */}
+      <header className="glass-nav sticky top-0 z-40 px-4 py-3 md:py-4 transition-all duration-300" id="main-header">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           
-          {/* Logo Brand area */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-pink-500 p-0.5 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <div className="w-full h-full rounded-[10px] bg-slate-950 flex items-center justify-center">
-                <Cpu className="w-5 h-5 text-white pulse-glow" />
-              </div>
+          {/* Logo */}
+          <div className="flex items-center gap-2.5" id="brand-logo">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-pink-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Layers className="w-5.5 h-5.5 text-white animate-float" />
             </div>
             <div>
-              <span className="text-xl font-black tracking-tight bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500 bg-clip-text text-transparent">
-                {dict.brand}
-              </span>
-              <p className="text-[10px] font-medium opacity-60 max-sm:hidden">
-                {dict.tagline}
+              <h1 className="text-lg md:text-xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
+                {currentCopy.meta.title}
+              </h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                {currentCopy.meta.subtitle}
               </p>
             </div>
           </div>
 
-          {/* Right Controls (Theme & Lang Switchers) */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Navigation Controls */}
+          <div className="flex items-center gap-2 md:gap-4" id="header-controls">
             
-            {/* Database status pill */}
-            <div className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold glass-panel border-opacity-40 max-sm:hidden",
-              isSupabaseConfigured ? "text-emerald-500" : "text-amber-500"
-            )}>
-              <Database className="w-3.5 h-3.5" />
-              <span>{isSupabaseConfigured ? "Sovereign DB" : "Demo Node"}</span>
-            </div>
-
-            {/* Language Switcher Button */}
+            {/* Language Switcher */}
             <button
               id="lang-toggle-btn"
-              onClick={() => toggleLang()}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-bold glass-panel glass-panel-interactive border-opacity-50 hover:bg-white hover:bg-opacity-5"
-              aria-label="Toggle Language"
+              onClick={() => changeLang(lang === 'ar' ? 'en' : 'ar')}
+              className="glass-button text-xs py-2 px-3 md:px-4 rounded-xl flex items-center gap-2 font-semibold hover:bg-slate-500/10 transition-colors"
+              title={lang === 'ar' ? 'Switch to English' : 'التحويل للعربية'}
             >
-              <Languages className="w-4 h-4 text-blue-500" />
-              <span className="text-xs uppercase">{lang === "ar" ? "EN" : "عربي"}</span>
+              <Globe className="w-4 h-4 text-blue-500" />
+              <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
             </button>
 
-            {/* Premium Theme Switcher Pill */}
-            <div className="flex items-center p-1 rounded-xl glass-panel border-opacity-40 gap-1">
-              {(["light", "dark", "pink"] as Theme[]).map((t) => (
-                <button
-                  key={t}
-                  id={`theme-btn-${t}`}
-                  onClick={() => toggleTheme(t)}
-                  className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200",
-                    theme === t 
-                      ? "bg-gradient-to-tr from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/10" 
-                      : "opacity-60 hover:opacity-100 hover:bg-white hover:bg-opacity-5"
-                  )}
-                  title={`Switch to ${t} theme`}
-                >
-                  {t === "light" && <Sun className="w-4 h-4" />}
-                  {t === "dark" && <Moon className="w-4 h-4" />}
-                  {t === "pink" && <Sparkles className="w-4 h-4 text-pink-400" />}
-                </button>
-              ))}
+            {/* Dynamic Theme Switcher */}
+            <div className="flex items-center bg-slate-500/10 p-1.5 rounded-2xl border border-white/5" id="theme-selectors-container">
+              <button
+                id="theme-btn-light"
+                onClick={() => changeTheme('light')}
+                className={`p-1.5 rounded-lg theme-btn-transition transition-all ${theme === 'light' ? 'bg-white text-slate-900 shadow-md scale-105' : 'text-slate-400 hover:text-slate-100'}`}
+                title="Light Theme"
+              >
+                <Sun className="w-4 h-4" />
+              </button>
+              <button
+                id="theme-btn-dark"
+                onClick={() => changeTheme('dark')}
+                className={`p-1.5 rounded-lg theme-btn-transition transition-all ${theme === 'dark' ? 'bg-slate-800 text-slate-100 shadow-md scale-105' : 'text-slate-400 hover:text-slate-100'}`}
+                title="Dark Theme"
+              >
+                <Moon className="w-4 h-4" />
+              </button>
+              <button
+                id="theme-btn-pink"
+                onClick={() => changeTheme('pink')}
+                className={`p-1.5 rounded-lg theme-btn-transition transition-all ${theme === 'pink' ? 'bg-pink-500 text-white shadow-md scale-105' : 'text-pink-400 hover:text-pink-100'}`}
+                title="Pink Theme"
+              >
+                <Palette className="w-4 h-4" />
+              </button>
             </div>
-
           </div>
+
         </div>
       </header>
 
-      {/* CORE CONTENT */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full z-10">
-
-        {/* HERO SECTION */}
-        <section id="hero-section" className="text-center py-12 md:py-20 flex flex-col items-center">
+      {/* ==========================================
+          HERO SECTION
+         ========================================== */}
+      <section className="relative px-4 py-16 md:py-24 text-center overflow-hidden" id="hero-section">
+        <div className="max-w-5xl mx-auto space-y-8">
           
-          {/* Sovereign Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/20 text-blue-500 shadow-sm mb-6 animate-fade-in">
-            <Shield className="w-3.5 h-3.5 text-blue-500 pulse-glow" />
-            <span>{dict.heroBadge}</span>
+          {/* Certified sovereign badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 font-bold tracking-wide animate-float" id="sovereign-badge">
+            <span className="w-2 py-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span>{currentCopy.meta.sovereignBadge}</span>
           </div>
 
-          {/* Majestic Hero Header */}
-          <h1 className="text-3.5xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.15] max-w-4xl text-center">
-            {lang === "ar" ? (
-              <>
-                <span>{dict.heroTitlePrefix}</span>
-                <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500 bg-clip-text text-transparent px-1">
-                  {dict.heroTitleHighlight}
-                </span>
-                <span>{dict.heroTitleSuffix}</span>
-              </>
-            ) : (
-              <>
-                <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-pink-500 bg-clip-text text-transparent px-1">
-                  {dict.heroTitleHighlight}
-                </span>
-                <span>{dict.heroTitleSuffix}</span>
-              </>
-            )}
-          </h1>
-
-          {/* Subtitle */}
-          <p className="mt-6 text-base sm:text-lg md:text-xl opacity-70 max-w-2xl leading-relaxed">
-            {dict.heroSubtitle}
-          </p>
-
-          {/* Call to Actions */}
-          <div className="mt-10 flex flex-wrap gap-4 items-center justify-center">
-            <a 
-              href="#sectors-section" 
-              className="px-8 py-4 rounded-xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white shadow-lg shadow-blue-500/15 hover:shadow-blue-500/25 transition-all duration-300 transform hover:-translate-y-0.5 flex items-center gap-2"
-            >
-              <span>{dict.ctaExplore}</span>
-              {lang === "ar" ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-            </a>
-            
-            <div className="px-6 py-4 rounded-xl text-sm font-semibold glass-panel border-opacity-40 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-indigo-500" />
-              <span className="opacity-80">UTC 2026-07-15</span>
-            </div>
-          </div>
-
-          {/* Real-time DB Status banner */}
-          <div className="mt-8 text-xs font-semibold px-4 py-2 rounded-lg glass-panel border-opacity-20 flex items-center gap-2">
-            <div className={cn("w-2 h-2 rounded-full pulse-glow", isSupabaseConfigured ? "bg-emerald-500" : "bg-amber-500")} />
-            <span className="opacity-85">
-              {isSupabaseConfigured ? dict.statusConnected : dict.statusDemo}
-            </span>
-          </div>
-
-        </section>
-
-        {/* INTEGRATED SOLUTIONS / SECTORS SECTION */}
-        <section id="sectors-section" className="py-16 border-t border-white border-opacity-5">
-          
-          <div className="text-center mb-12">
-            <h2 className="text-2.5xl sm:text-4xl font-extrabold tracking-tight">
-              {dict.sectionTitle}
+          {/* Headline */}
+          <div className="space-y-4">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight md:leading-none text-slate-900 dark:text-white" id="main-headline">
+              {currentCopy.meta.headline}
             </h2>
-            <p className="mt-3 text-sm sm:text-base opacity-70 max-w-2xl mx-auto leading-relaxed">
-              {dict.sectionSubtitle}
+            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto leading-relaxed" id="main-description">
+              {currentCopy.meta.description}
             </p>
           </div>
 
-          {/* CATEGORY FILTERS */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mb-10 max-w-3xl mx-auto">
-            {([
-              { id: "all", label: dict.all },
-              { id: "edu", label: dict.edu },
-              { id: "health", label: dict.health },
-              { id: "realestate", label: dict.realestate },
-              { id: "commerce", label: dict.commerce }
-            ] as const).map((cat) => (
-              <button
-                key={cat.id}
-                id={`cat-filter-${cat.id}`}
-                onClick={() => setActiveCategory(cat.id)}
-                className={cn(
-                  "px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 glass-panel border-opacity-40 flex items-center gap-2",
-                  activeCategory === cat.id 
-                    ? "bg-gradient-to-tr from-blue-500 via-indigo-600 to-indigo-700 text-white border-opacity-10 border-transparent shadow-lg shadow-blue-500/10" 
-                    : "opacity-75 hover:opacity-100 hover:bg-white hover:bg-opacity-5"
-                )}
+          {/* Call to action buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4" id="hero-actions">
+            <button
+              onClick={() => {
+                const el = document.getElementById('sectors-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-sm shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.02]"
+              id="cta-primary-btn"
+            >
+              {currentCopy.cta.primaryText}
+            </button>
+            <button
+              onClick={() => {
+                const el = document.getElementById('meta-compliance-info');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl glass-button text-sm font-extrabold border border-white/10 hover:bg-slate-500/10 transition-all hover:scale-[1.02]"
+              id="cta-secondary-btn"
+            >
+              {currentCopy.cta.secondaryText}
+            </button>
+          </div>
+
+          {/* Stats matrix */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto pt-10" id="stats-grid">
+            {currentCopy.stats.map((stat, idx) => (
+              <div 
+                key={idx} 
+                className="glass-card p-6 rounded-2xl text-center border-white/5 bg-slate-500/5 hover:border-blue-500/30"
+                id={`stat-card-${idx}`}
               >
-                {cat.id === "all" && <Layers className="w-4 h-4" />}
-                {cat.id === "edu" && <GraduationCap className="w-4 h-4 text-blue-400" />}
-                {cat.id === "health" && <HeartPulse className="w-4 h-4 text-emerald-400" />}
-                {cat.id === "realestate" && <Building2 className="w-4 h-4 text-amber-400" />}
-                {cat.id === "commerce" && <ShoppingBag className="w-4 h-4 text-rose-400" />}
-                <span>{cat.label}</span>
-              </button>
+                <div className="text-3xl font-black text-blue-600 dark:text-blue-400 mb-1">{stat.value}</div>
+                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">{stat.label}</div>
+              </div>
             ))}
           </div>
 
-          {/* DYNAMIC CARD GRID */}
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-              <p className="text-sm opacity-70 font-medium">{dict.loadingData}</p>
-            </div>
-          ) : error ? (
-            <div className="text-center py-16 glass-panel border-red-500/20 max-w-xl mx-auto rounded-2xl p-8">
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <p className="text-base font-bold mb-4">Error Connecting to Sovereign Node</p>
-              <button 
-                onClick={() => refetch()} 
-                className="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition"
-              >
-                {dict.retryButton}
-              </button>
-            </div>
-          ) : filteredProjects.length === 0 ? (
-            <div className="text-center py-20 max-w-md mx-auto">
-              <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-              <p className="opacity-70 text-sm font-medium">{dict.noDataFound}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProjects.map((proj) => {
-                const config = proj.modules_config;
-                const title = lang === "ar" ? config.title_ar : config.title_en;
-                const desc = lang === "ar" ? config.description_ar : config.description_en;
-                const features = lang === "ar" ? config.features_ar : config.features_en;
+        </div>
+      </section>
 
-                return (
-                  <div
-                    key={proj.id}
-                    id={`project-card-${proj.project_slug}`}
-                    className={cn(
-                      "rounded-2xl p-6 glass-panel flex flex-col justify-between overflow-hidden relative group",
-                      proj.is_active 
-                        ? "glass-panel-interactive border-opacity-60 cursor-pointer" 
-                        : "opacity-60 grayscale-[15%]"
-                    )}
-                    onClick={() => proj.is_active && handleOpenDetails(proj)}
-                  >
-                    
-                    {/* Glowing highlight corner */}
-                    <div className={cn(
-                      "absolute -top-16 -right-16 w-32 h-32 rounded-full opacity-10 group-hover:opacity-20 blur-2xl transition-opacity pointer-events-none bg-gradient-to-br",
-                      config.accent_color || "from-blue-500 to-indigo-500"
-                    )} />
+      {/* Injection Area for Central Ads (Top Placement) */}
+      <Ad_Renderer_Component placement="top" lang={lang} />
 
-                    <div>
-                      {/* Badge status header */}
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-bold tracking-wider opacity-60 uppercase bg-white bg-opacity-5 px-2.5 py-1 rounded-full border border-white border-opacity-5">
-                          {proj.sector_name}
-                        </span>
-                        
-                        {proj.is_active ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-black bg-emerald-500/15 border border-emerald-500/25 text-emerald-500 px-2.5 py-1 rounded-full shadow-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-glow" />
-                            <span>{dict.activeStatus}</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-500/15 border border-amber-500/25 text-amber-500 px-2.5 py-1 rounded-full">
-                            <Lock className="w-3 h-3" />
-                            <span>{dict.comingSoon}</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Icon & Title */}
-                      <div className="flex items-start gap-4 mt-2">
-                        <div className={cn(
-                          "w-12 h-12 rounded-xl bg-gradient-to-tr p-0.5 flex items-center justify-center text-white shrink-0 shadow-lg shadow-black/10",
-                          config.accent_color || "from-blue-500 to-indigo-500"
-                        )}>
-                          <div className="w-full h-full rounded-[10px] bg-slate-900 bg-opacity-90 flex items-center justify-center">
-                            <ProjectIcon name={config.icon || ""} className="w-6 h-6" />
-                          </div>
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-black tracking-tight leading-snug group-hover:text-blue-500 transition-colors">
-                            {title}
-                          </h3>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <p className="mt-4 text-xs opacity-75 leading-relaxed min-h-[48px]">
-                        {desc}
-                      </p>
-
-                      {/* Compact feature list */}
-                      {features && features.length > 0 && (
-                        <ul className="mt-4 space-y-2 border-t border-white border-opacity-5 pt-4">
-                          {features.slice(0, 2).map((feat, idx) => (
-                            <li key={idx} className="flex items-center gap-2 text-[11px] opacity-80">
-                              <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                              <span className="truncate">{feat}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-
-                    {/* Bottom Action Section */}
-                    <div className="mt-6 pt-4 border-t border-white border-opacity-5 flex items-center justify-between">
-                      <span className="text-[10px] opacity-50 font-mono uppercase">
-                        {proj.project_slug}
-                      </span>
-                      
-                      {proj.is_active ? (
-                        <button
-                          id={`btn-action-${proj.project_slug}`}
-                          className="text-xs font-bold text-blue-500 hover:text-blue-400 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform"
-                        >
-                          <span>{dict.showDetails}</span>
-                          {lang === "ar" ? <ChevronLeft className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                        </button>
-                      ) : (
-                        <span className="text-xs font-semibold opacity-40 flex items-center gap-1">
-                          <Lock className="w-3 h-3" />
-                          <span>{dict.comingSoon}</span>
-                        </span>
-                      )}
-                    </div>
-
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-        </section>
-
-        {/* CORE VALUES / CHERISHED PILLARS */}
-        <section id="values-section" className="py-16 border-t border-white border-opacity-5">
-          <div className="text-center mb-12">
-            <h2 className="text-2.5xl sm:text-4xl font-extrabold tracking-tight">
-              {dict.valuesTitle}
-            </h2>
-            <p className="mt-3 text-sm sm:text-base opacity-70 max-w-2xl mx-auto leading-relaxed">
-              {dict.valuesSubtitle}
+      {/* ==========================================
+          SECTORS SECTION
+         ========================================== */}
+      <section className="px-4 py-16 md:py-20 relative bg-slate-500/[0.02] border-y border-slate-500/5" id="sectors-section">
+        <div className="max-w-7xl mx-auto space-y-12">
+          
+          {/* Header */}
+          <div className="text-center space-y-3 max-w-3xl mx-auto">
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white" id="sectors-section-title">
+              {currentCopy.sectorsTitle}
+            </h3>
+            <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 leading-relaxed" id="sectors-section-subtitle">
+              {currentCopy.sectorsSubtitle}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <div className="p-6 rounded-2xl glass-panel relative overflow-hidden">
-              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-4">
-                <Shield className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold mb-2">{dict.val1Title}</h3>
-              <p className="text-xs opacity-75 leading-relaxed">{dict.val1Desc}</p>
-            </div>
+          {/* Sectors Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="sectors-grid-container">
+            {currentCopy.sectors.map((sector) => (
+              <div 
+                key={sector.id} 
+                className={`glass-card p-6 rounded-3xl flex flex-col justify-between group transition-all duration-300 relative border-white/5 bg-slate-500/5 ${sector.isActive ? 'ring-2 ring-blue-500/30' : ''}`}
+                id={`sector-card-${sector.id}`}
+              >
+                {/* Active Indicator Badge */}
+                <div className="absolute top-4 left-4">
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${sector.isActive ? 'bg-green-500/15 text-green-500 border border-green-500/20' : 'bg-slate-500/10 text-slate-500 border border-slate-500/10'}`}>
+                    {sector.statusBadge}
+                  </span>
+                </div>
 
-            <div className="p-6 rounded-2xl glass-panel relative overflow-hidden">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mb-4">
-                <Layers className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold mb-2">{dict.val2Title}</h3>
-              <p className="text-xs opacity-75 leading-relaxed">{dict.val2Desc}</p>
-            </div>
-
-            <div className="p-6 rounded-2xl glass-panel relative overflow-hidden">
-              <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-500 flex items-center justify-center mb-4">
-                <Clock className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold mb-2">{dict.val3Title}</h3>
-              <p className="text-xs opacity-75 leading-relaxed">{dict.val3Desc}</p>
-            </div>
-
-          </div>
-        </section>
-
-      </main>
-
-      {/* DYNAMIC DETAILS / SYSTEM CONFIG DRAWER OVERLAY */}
-      {selectedProject && (
-        <div 
-          id="details-overlay-backdrop"
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-opacity duration-300"
-          onClick={handleCloseDetails}
-        >
-          <div 
-            id="details-panel"
-            className="w-full max-w-2xl glass-panel rounded-2xl overflow-hidden relative max-h-[90vh] flex flex-col shadow-2xl animate-fade-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            
-            {/* Modal Header */}
-            <div className="p-6 border-b border-white border-opacity-5 flex items-center justify-between bg-white bg-opacity-2">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-10 h-10 rounded-xl p-0.5 flex items-center justify-center text-white",
-                  selectedProject.modules_config.accent_color || "from-blue-500 to-indigo-500"
-                )}>
-                  <div className="w-full h-full rounded-[10px] bg-slate-900 flex items-center justify-center">
-                    <ProjectIcon name={selectedProject.modules_config.icon || ""} className="w-5 h-5" />
+                <div className="space-y-4 pt-4 text-right">
+                  {/* Icon Container */}
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-2">
+                    {renderSectorIcon(sector.iconName)}
+                  </div>
+                  
+                  {/* Name and Description */}
+                  <div className="space-y-2">
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
+                      {sector.name}
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed h-[80px] overflow-hidden text-ellipsis">
+                      {sector.description}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-extrabold">
-                    {lang === "ar" ? selectedProject.modules_config.title_ar : selectedProject.modules_config.title_en}
-                  </h3>
-                  <span className="text-[10px] opacity-60 uppercase tracking-wide">
-                    {selectedProject.sector_name}
-                  </span>
+
+                {/* Unified CTA Logic - Programmatically Adaptive */}
+                <div className="pt-6" id={`sector-action-container-${sector.id}`}>
+                  {sector.isActive && sector.linkUrl ? (
+                    <button
+                      onClick={() => handleSectorClick(sector)}
+                      id={`sector-trigger-${sector.id}`}
+                      className="glass-button w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white text-slate-800 dark:text-slate-200 border-white/10 hover:border-blue-600 hover:scale-[1.02] cursor-pointer"
+                    >
+                      <span>{lang === 'ar' ? 'دخول القطاع التعليمي المفعّل' : 'Enter Active Education Sector'}</span>
+                      <ExternalLink className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSectorClick(sector)}
+                      id={`sector-trigger-${sector.id}`}
+                      className="w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all bg-slate-500/10 text-slate-600 dark:text-slate-300 hover:bg-slate-500/20 hover:scale-[1.02] cursor-pointer border border-white/5"
+                    >
+                      <span>{lang === 'ar' ? 'طلب التفعيل والاطلاع' : 'Request Activation'}</span>
+                      <ArrowLeftRight className="w-4 h-4 rotate-180" />
+                    </button>
+                  )}
                 </div>
               </div>
-              
-              <button 
-                id="close-details-btn"
-                onClick={handleCloseDetails}
-                className="w-8 h-8 rounded-full flex items-center justify-center glass-panel hover:bg-white hover:bg-opacity-10 transition"
-                aria-label="Close details"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm">
-              
-              {/* Detailed Description */}
-              <div className="space-y-2">
-                <h4 className="font-bold text-xs uppercase opacity-50 tracking-wider">
-                  {lang === "ar" ? "نظرة عامة على النظام" : "System Overview"}
-                </h4>
-                <p className="opacity-85 leading-relaxed text-xs">
-                  {lang === "ar" ? selectedProject.modules_config.description_ar : selectedProject.modules_config.description_en}
-                </p>
-              </div>
-
-              {/* Sub-system Technical specifications */}
-              <div className="grid grid-cols-2 gap-4">
-                
-                <div className="p-3.5 rounded-xl glass-panel border-opacity-30 bg-white bg-opacity-1">
-                  <span className="text-[10px] opacity-50 block mb-1">
-                    {dict.systemSlug}
-                  </span>
-                  <span className="font-mono text-xs font-bold uppercase text-indigo-400">
-                    {selectedProject.project_slug}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl glass-panel border-opacity-30 bg-white bg-opacity-1">
-                  <span className="text-[10px] opacity-50 block mb-1">
-                    {dict.operationalStatus}
-                  </span>
-                  <span className="text-xs font-extrabold text-emerald-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-glow" />
-                    <span>{dict.activeStatus}</span>
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl glass-panel border-opacity-30 bg-white bg-opacity-1">
-                  <span className="text-[10px] opacity-50 block mb-1">
-                    {dict.activeUsersLabel}
-                  </span>
-                  <span className="text-xs font-extrabold opacity-90">
-                    120+ {lang === "ar" ? "جهة حكومية" : "Federal Tenants"}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-xl glass-panel border-opacity-30 bg-white bg-opacity-1">
-                  <span className="text-[10px] opacity-50 block mb-1">
-                    {dict.securityAuditLabel}
-                  </span>
-                  <span className="text-xs font-extrabold text-blue-400 flex items-center gap-1">
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>{dict.certifiedSovereign}</span>
-                  </span>
-                </div>
-
-              </div>
-
-              {/* Features full list */}
-              {selectedProject.modules_config.features_ar && (
-                <div className="space-y-3">
-                  <h4 className="font-bold text-xs uppercase opacity-50 tracking-wider">
-                    {dict.keyFeatures}
-                  </h4>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(lang === "ar" 
-                      ? selectedProject.modules_config.features_ar 
-                      : selectedProject.modules_config.features_en || []
-                    ).map((feat, idx) => (
-                      <li key={idx} className="flex items-center gap-2.5 p-3 rounded-xl bg-white bg-opacity-2 border border-white border-opacity-5 text-xs">
-                        <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-                          <Check className="w-3 text-emerald-500" />
-                        </div>
-                        <span className="opacity-90">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Secure single-sign-on mock gateway */}
-              <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/5 flex items-start gap-3">
-                <Shield className="w-5 h-5 text-blue-500 shrink-0 mt-0.5 pulse-glow" />
-                <div className="space-y-1">
-                  <span className="font-bold text-xs block text-blue-400">
-                    {lang === "ar" ? "بوابة النفاذ الوطني الموحد (SSO)" : "National Single Sign-On (SSO)"}
-                  </span>
-                  <p className="text-[11px] opacity-75">
-                    {lang === "ar" 
-                      ? "سيتم تحويلك بشكل آمن لتسجيل الدخول الفيدرالي والتحقق من الهوية الرقمية السيادية التابعة لجهة العمل المعتمدة." 
-                      : "You will be redirected securely to the national federal authentication gateway for corporate ID validation."}
-                  </p>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-6 border-t border-white border-opacity-5 bg-white bg-opacity-2 flex items-center justify-end gap-3">
-              <button 
-                id="cancel-modal-btn"
-                onClick={handleCloseDetails}
-                className="px-5 py-2.5 rounded-lg text-xs font-bold opacity-70 hover:opacity-100 hover:bg-white hover:bg-opacity-5 transition"
-              >
-                {dict.close}
-              </button>
-              <button 
-                id="launch-sso-btn"
-                onClick={() => {
-                  alert(lang === "ar" ? "جاري توجيهك بأمان لنظام النفاذ الموحد..." : "Redirecting securely to National SSO Gateway...");
-                }}
-                className="px-6 py-2.5 rounded-lg text-xs font-bold bg-gradient-to-tr from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-blue-500/20 transition-all flex items-center gap-1.5"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>{dict.launchPortal}</span>
-              </button>
-            </div>
-
+            ))}
           </div>
+
         </div>
-      )}
+      </section>
 
-      {/* FOOTER */}
-      <footer id="platform-footer" className="mt-auto border-t border-white border-opacity-5 glass-panel py-10 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Meta API & WA Business Sovereign Info section */}
+      <section className="px-4 py-16 max-w-7xl mx-auto" id="meta-compliance-info">
+        <div className="glass-card p-8 md:p-12 rounded-3xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border-white/5 bg-slate-500/5">
           
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-white border-opacity-5">
+          <div className="lg:col-span-8 space-y-4 text-right">
+            <div className="inline-flex items-center gap-2 text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider" id="meta-integration-title">
+              <ShieldCheck className="w-5 h-5 text-pink-500" />
+              <span>إثبات النشاط والامتثال لـ Meta Platforms</span>
+            </div>
+            <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white" id="meta-integration-headline">
+              شريك معتمد لـ WhatsApp Business API وحلول المراسلة
+            </h3>
+            <p className="text-sm md:text-base text-slate-600 dark:text-slate-300 leading-relaxed" id="meta-integration-desc">
+              تعتمد منصة <strong className="text-blue-600 dark:text-blue-400">ذكاء سهل</strong> على توجيه تواصل مباشر وبنية معمارية مشفرة من النهاية إلى النهاية لتمكين قطاعات الأعمال والتعليم من مراسلة عملائهم ومستخدميهم بذكاء وأتمتة متناهية، بالامتثال الكامل لسياسات Meta Business Verification وشروط خصوصية Meta للأعمال.
+            </p>
+            <div className="pt-2 text-xs text-slate-500 dark:text-slate-400 space-y-1.5" id="business-verification-info">
+              <p className="font-bold text-slate-700 dark:text-slate-300">🏢 معلومات المطابقة التجارية والسيادية:</p>
+              <p>• {currentCopy.meta.businessInfo.registeredName}</p>
+              <p>• {currentCopy.meta.businessInfo.licenseNumber}</p>
+              <p>• {currentCopy.meta.businessInfo.address}</p>
+            </div>
+          </div>
+
+          <div className="lg:col-span-4 flex flex-col justify-center items-center p-6 rounded-2xl bg-slate-500/10 border border-white/5 text-center" id="meta-badge-container">
+            <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
+              <ShieldCheck className="w-10 h-10 text-blue-500" />
+            </div>
+            <span className="text-lg font-extrabold text-slate-800 dark:text-slate-100 block mb-1">
+              Meta Approved
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400">
+              WhatsApp Business Solution Provider Ready
+            </span>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Injection Area for Central Ads (Bottom Placement) */}
+      <Ad_Renderer_Component placement="bottom" lang={lang} />
+
+      {/* ==========================================
+          FOOTER & LEGAL DISCLOSURES
+         ========================================== */}
+      <footer className="glass-nav mt-auto px-4 py-8 md:py-12 border-t border-slate-500/10 text-right" id="legal-footer">
+        <div className="max-w-7xl mx-auto space-y-8">
+          
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
             
-            {/* Footer Logo info */}
-            <div className="flex items-center gap-3 max-md:text-center max-md:flex-col">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-pink-500 p-0.5 flex items-center justify-center">
-                <Cpu className="w-4 h-4 text-white" />
+            <div className="md:col-span-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                  <Layers className="w-4.5 h-4.5 text-blue-400" />
+                </div>
+                <h4 className="text-base font-black text-slate-900 dark:text-white">ذكاء سهل | Easy Intellect</h4>
               </div>
-              <div>
-                <span className="font-extrabold text-sm">{dict.brand}</span>
-                <p className="text-[10px] opacity-60 mt-0.5">{dict.tagline}</p>
-              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-lg">
+                {currentCopy.meta.metaVerificationText}
+              </p>
             </div>
 
-            {/* Links and Policies */}
-            <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold opacity-75">
-              <a href="#" className="hover:text-blue-500 transition">{dict.compliancePrivacy}</a>
-              <span className="opacity-20">•</span>
-              <a href="#" className="hover:text-blue-500 transition">{dict.complianceTerms}</a>
-              <span className="opacity-20">•</span>
-              <a href="#" className="hover:text-blue-500 transition">{dict.complianceSLA}</a>
+            <div className="md:col-span-6 space-y-3 md:text-left flex flex-col md:items-end">
+              <h5 className="text-xs font-bold text-slate-400 uppercase tracking-widest">المستندات القانونية والامتثال</h5>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 justify-start md:justify-end" id="legal-links-list">
+                {currentCopy.legal.links.map((link) => (
+                  <button
+                    key={link.id}
+                    onClick={() => setActiveLegalModal({ title: link.title, content: link.content })}
+                    className="text-xs text-slate-500 hover:text-blue-500 dark:text-slate-400 dark:hover:text-blue-400 font-semibold cursor-pointer underline underline-offset-4"
+                  >
+                    {link.text}
+                  </button>
+                ))}
+              </div>
             </div>
 
           </div>
 
-          {/* Compliance and system indicators */}
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] opacity-55">
-            <span className="text-center sm:text-right">{dict.footerCopyright}</span>
-            <span className="text-center sm:text-left flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5 text-blue-500" />
-              <span>{dict.footerCompliance}</span>
-            </span>
+          <div className="border-t border-slate-500/10 pt-6 space-y-4 text-center">
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-4xl mx-auto leading-relaxed">
+              {currentCopy.legal.metaDisclaimer}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
+              {currentCopy.legal.copyright}
+            </p>
           </div>
 
         </div>
       </footer>
 
-    </div>
-  );
-}
+      {/* ==========================================
+          INTERACTIVE MODAL FOR INACTIVE SECTORS
+         ========================================== */}
+      {isModalOpen && selectedSector && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300" id="inactive-sector-modal-overlay">
+          <div 
+            className="glass-modal w-full max-w-lg rounded-3xl overflow-hidden p-6 md:p-8 space-y-6 relative border border-white/10"
+            id="inactive-sector-modal"
+          >
+            
+            {/* Close Button */}
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 left-4 p-2 rounded-full hover:bg-slate-500/10 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+              id="close-modal-x-btn"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-export default function Home() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#030712] text-[#f9fafb] gap-4">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-        <span className="text-sm font-bold tracking-wide">جاري الاتصال بنظام النفاذ السيادي...</span>
-      </div>
-    }>
-      <LandingPageContent />
-    </Suspense>
+            {/* Modal Title and Sector Header */}
+            <div className="text-right space-y-2 pt-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/10 text-pink-500 text-[10px] font-bold">
+                {currentCopy.modal.title}
+              </div>
+              <h4 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  {renderSectorIcon(selectedSector.iconName)}
+                </span>
+                <span>{selectedSector.name}</span>
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {currentCopy.modal.description}
+              </p>
+            </div>
+
+            {/* Suggestions Form */}
+            {!isSubmitted ? (
+              <form onSubmit={handleSuggestionSubmit} className="space-y-4 text-right" id="suggestion-form">
+                
+                <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                  {currentCopy.modal.motivation}
+                </p>
+
+                {/* Textarea */}
+                <div className="space-y-1.5">
+                  <textarea
+                    required
+                    value={suggestion}
+                    onChange={(e) => setSuggestion(e.target.value)}
+                    placeholder={currentCopy.modal.placeholderSuggestion}
+                    rows={4}
+                    className="glass-input w-full p-4 rounded-xl text-xs leading-relaxed resize-none"
+                    id="suggestion-textarea"
+                  ></textarea>
+                </div>
+
+                {/* Communication Input */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block">
+                    {currentCopy.modal.contactLabel}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={contact}
+                    onChange={(e) => setContact(e.target.value)}
+                    placeholder={currentCopy.modal.placeholderContact}
+                    className="glass-input w-full p-3.5 rounded-xl text-xs"
+                    id="suggestion-contact-input"
+                  />
+                </div>
+
+                {/* Action button */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="glass-button w-full py-3 px-6 rounded-xl font-extrabold text-xs text-center flex items-center justify-center gap-2 bg-blue-600 text-white disabled:opacity-50 cursor-pointer hover:bg-blue-700 hover:scale-[1.01]"
+                  id="suggestion-submit-btn"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+                      <span>{currentCopy.modal.submittingBtn}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>{currentCopy.modal.submitBtn}</span>
+                    </>
+                  )}
+                </button>
+
+              </form>
+            ) : (
+              /* Success feedback container */
+              <div className="text-center py-6 space-y-4" id="suggestion-success-panel">
+                <div className="w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center mx-auto text-green-500">
+                  <CheckCircle2 className="w-10 h-10" />
+                </div>
+                <div className="space-y-2">
+                  <h5 className="text-lg font-black text-slate-900 dark:text-white">
+                    {currentCopy.modal.successTitle}
+                  </h5>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-sm mx-auto">
+                    {currentCopy.modal.successDesc}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="glass-button py-2.5 px-6 rounded-xl text-xs font-bold border border-white/10"
+                  id="success-close-btn"
+                >
+                  {currentCopy.modal.closeBtn}
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ==========================================
+          INTERACTIVE MODAL FOR LEGAL LINKS
+         ========================================== */}
+      {activeLegalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300" id="legal-modal-overlay">
+          <div 
+            className="glass-modal w-full max-w-md rounded-3xl overflow-hidden p-6 md:p-8 space-y-5 relative border border-white/10"
+            id="legal-modal"
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setActiveLegalModal(null)}
+              className="absolute top-4 left-4 p-2 rounded-full hover:bg-slate-500/10 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+              id="close-legal-modal-btn"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-right space-y-3 pt-2">
+              <h4 className="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <span className="w-2 h-6 rounded-full bg-blue-500"></span>
+                <span>{activeLegalModal.title}</span>
+              </h4>
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                {activeLegalModal.content}
+              </p>
+            </div>
+
+            <div className="pt-2 text-center">
+              <button
+                onClick={() => setActiveLegalModal(null)}
+                className="glass-button w-full py-2.5 rounded-xl text-xs font-bold border border-white/10 cursor-pointer"
+              >
+                {lang === 'ar' ? 'فهمت وموافق' : 'I Understand'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }
