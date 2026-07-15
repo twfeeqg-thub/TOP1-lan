@@ -1,0 +1,6 @@
+{
+  "name": "ذكاء سهل",
+  "description": "منصة سحابية متعددة المستأجرين وبوابة التحول الرقمي السيادي المتكاملة بمختلف القطاعات",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
