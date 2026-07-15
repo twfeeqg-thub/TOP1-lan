@@ -1,6 +1,6 @@
 {
   "name": "ذكاء سهل",
-  "description": "منصة مركزية ذكية لإدارة قطاعات متعددة مثل التعليم، الصحة، العقارات، والتجارة عبر لوحة تحكم موحدة ومترابطة.",
+  "description": "منصة سحابية متعددة المستأجرين وبوابة التحول الرقمي السيادي المتكاملة بمختلف القطاعات",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

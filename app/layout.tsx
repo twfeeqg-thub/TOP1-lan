@@ -1,15 +1,20 @@
 import type {Metadata} from 'next';
-import './globals.css'; // Global styles
+import './globals.css';
+import { AppProviders } from './providers';
 
 export const metadata: Metadata = {
-  title: 'My Google AI Studio App',
-  description: 'My Google AI Studio App',
+  title: 'ذكاء سهل - بوابة التحول الرقمي السيادي',
+  description: 'المنصة السحابية الموحدة لتمكين التحول الرقمي السيادي للقطاعات التعليمية والصحية والعقارية والتجارية.',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en">
-      <body suppressHydrationWarning>{children}</body>
+    <html lang="ar" dir="rtl" data-theme="dark">
+      <body suppressHydrationWarning className="antialiased min-h-screen">
+        <AppProviders>
+          {children}
+        </AppProviders>
+      </body>
     </html>
   );
 }
