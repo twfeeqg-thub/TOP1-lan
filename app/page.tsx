@@ -1,20 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  GraduationCap, 
-  HeartPulse, 
-  Building2, 
-  ShoppingBag, 
-  Sun, 
-  Moon, 
-  Palette, 
-  Globe, 
-  Send, 
-  X, 
-  CheckCircle2, 
-  ShieldCheck, 
-  ExternalLink, 
+import {
+  GraduationCap,
+  HeartPulse,
+  Building2,
+  ShoppingBag,
+  Sun,
+  Moon,
+  Palette,
+  Globe,
+  Send,
+  X,
+  CheckCircle2,
+  ShieldCheck,
+  ExternalLink,
   ArrowLeftRight,
   Sparkles,
   Layers,
@@ -22,12 +22,13 @@ import {
   Building,
   Briefcase
 } from 'lucide-react';
+import { supabase, fallbackProjects } from '@/lib/supabase';
 
 // ==========================================
-// 1. DATA-DRIVEN CONFIGURATION (DATA MATRIX)
+// 1. UI TEXT CONFIGURATION (PRESENTATION ONLY - NO MOCK DATA)
 // ==========================================
 
-const LANDING_CONFIG = {
+const UI_TEXT = {
   ar: {
     meta: {
       title: "ذكاء سهل",
@@ -53,41 +54,6 @@ const LANDING_CONFIG = {
     ],
     sectorsTitle: "القطاعات الرقمية الموحدة",
     sectorsSubtitle: "تكامل خدماتنا السحابية لتحقيق قفزة نوعية في تسيير أعمالك بكفاءة وأمان رقمي متكامل.",
-    sectors: [
-      {
-        id: 'education',
-        name: 'قطاع التعليم الرقمي',
-        description: 'حلول ذكية لتمكين الكادر التعليمي والطلاب من خلال فضاءات تعليمية سحابية متكاملة وسهلة الاستخدام.',
-        iconName: 'GraduationCap',
-        isActive: true,
-        linkUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects',
-        statusBadge: 'مفعّل ونشط',
-      },
-      {
-        id: 'health',
-        name: 'قطاع الرعاية الصحية الذكية',
-        description: 'بوابات صحية موحدة تساهم في تسريع التحول الرقمي الطبي وتسهيل تتبع السجلات والخدمات العلاجية.',
-        iconName: 'HeartPulse',
-        isActive: false,
-        statusBadge: 'قيد التطوير',
-      },
-      {
-        id: 'real-estate',
-        name: 'قطاع العقارات والمباني السيادية',
-        description: 'أنظمة ذكية لإدارة وتتبع الأصول العقارية والملكيات وتوثيق البيانات بنظام عقاري متكامل وعالي الأمان.',
-        iconName: 'Building2',
-        isActive: false,
-        statusBadge: 'قيد التطوير',
-      },
-      {
-        id: 'commerce',
-        name: 'قطاع التجارة والأعمال المترابطة',
-        description: 'منصات تجارية سحابية لربط المتاجر وإدارة المبيعات وسلاسل التوريد مع الدعم المتكامل لعمليات الدفع.',
-        iconName: 'ShoppingBag',
-        isActive: false,
-        statusBadge: 'قيد التطوير',
-      },
-    ],
     modal: {
       title: "القطاع قيد التحضير والإنشاء",
       description: "نحن نعمل جاهدين بالتعاون مع شركائنا التقنيين لتجهيز هذا القطاع الرقمي بأعلى معايير الأمان.",
@@ -137,41 +103,6 @@ const LANDING_CONFIG = {
     ],
     sectorsTitle: "Unified Digital Sectors",
     sectorsSubtitle: "Seamlessly integrate our cloud services to achieve a qualitative leap in your business operations with absolute digital efficiency and safety.",
-    sectors: [
-      {
-        id: 'education',
-        name: 'Digital Education Sector',
-        description: 'Smart solutions empowering educators and students through integrated, easy-to-use cloud environments.',
-        iconName: 'GraduationCap',
-        isActive: true,
-        linkUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects',
-        statusBadge: 'Active & Live',
-      },
-      {
-        id: 'health',
-        name: 'Smart Healthcare Sector',
-        description: 'Unified health portals driving digital transformation and medical record tracking securely.',
-        iconName: 'HeartPulse',
-        isActive: false,
-        statusBadge: 'Under Development',
-      },
-      {
-        id: 'real-estate',
-        name: 'Sovereign Real Estate Sector',
-        description: 'Intelligent systems for tracking property registry assets and secure real estate transactions.',
-        iconName: 'Building2',
-        isActive: false,
-        statusBadge: 'Under Development',
-      },
-      {
-        id: 'commerce',
-        name: 'Unified Commerce Sector',
-        description: 'Sovereign cloud commerce platforms linking merchants and supply chains with integrated payment gateways.',
-        iconName: 'ShoppingBag',
-        isActive: false,
-        statusBadge: 'Under Development',
-      },
-    ],
     modal: {
       title: "Sector is Under Construction",
       description: "We are working hard with our technical partners to launch this digital sector meeting the highest standards of safety.",
@@ -199,64 +130,118 @@ const LANDING_CONFIG = {
 };
 
 // ==========================================
-// 2. ADS SIMULATOR CONFIGURATION (CENTRAL DB MOCKUP)
+// 2. SECTOR METADATA (IDENTITY & PRESENTATION - STATIC)
+// ==========================================
+
+const SECTOR_META: {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
+  iconName: string;
+  linkUrl?: string;
+}[] = [
+  {
+    id: 'education',
+    nameAr: 'قطاع التعليم الرقمي',
+    nameEn: 'Digital Education Sector',
+    descriptionAr: 'حلول ذكية لتمكين الكادر التعليمي والطلاب من خلال فضاءات تعليمية سحابية متكاملة وسهلة الاستخدام.',
+    descriptionEn: 'Smart solutions empowering educators and students through integrated, easy-to-use cloud environments.',
+    iconName: 'GraduationCap',
+    linkUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects',
+  },
+  {
+    id: 'health',
+    nameAr: 'قطاع الرعاية الصحية الذكية',
+    nameEn: 'Smart Healthcare Sector',
+    descriptionAr: 'بوابات صحية موحدة تساهم في تسريع التحول الرقمي الطبي وتسهيل تتبع السجلات والخدمات العلاجية.',
+    descriptionEn: 'Unified health portals driving digital transformation and medical record tracking securely.',
+    iconName: 'HeartPulse',
+  },
+  {
+    id: 'real-estate',
+    nameAr: 'قطاع العقارات والمباني السيادية',
+    nameEn: 'Sovereign Real Estate Sector',
+    descriptionAr: 'أنظمة ذكية لإدارة وتتبع الأصول العقارية والملكيات وتوثيق البيانات بنظام عقاري متكامل وعالي الأمان.',
+    descriptionEn: 'Intelligent systems for tracking property registry assets and secure real estate transactions.',
+    iconName: 'Building2',
+  },
+  {
+    id: 'commerce',
+    nameAr: 'قطاع التجارة والأعمال المترابطة',
+    nameEn: 'Unified Commerce Sector',
+    descriptionAr: 'منصات تجارية سحابية لربط المتاجر وإدارة المبيعات وسلاسل التوريد مع الدعم المتكامل لعمليات الدفع.',
+    descriptionEn: 'Sovereign cloud commerce platforms linking merchants and supply chains with integrated payment gateways.',
+    iconName: 'ShoppingBag',
+  },
+];
+
+// ==========================================
+// 3. ADS FALLBACK (EMPTY - LAST RESORT)
 // ==========================================
 
 interface Ad {
   id: string;
-  title: string;
-  description: string;
-  targetUrl: string;
+  ad_config: {
+    title: string;
+    description: string;
+    targetUrl: string;
+    placement: 'top' | 'bottom';
+    lang: 'ar' | 'en';
+  };
 }
 
-const ADS_DATABASE: Record<'ar' | 'en', Record<'top' | 'bottom', Ad[]>> = {
-  ar: {
-    top: [
-      {
-        id: 'ad-meta-partner',
-        title: 'تكامل فوري لخدمات WhatsApp للأعمال',
-        description: 'وفر قنوات تواصل رسمية لجمهورك متصلة بأنظمتك المركزية عبر ربط Meta API المباشر بنسبة تفعيل 100%.',
-        targetUrl: '#whatsapp-info'
-      }
-    ],
-    bottom: [
-      {
-        id: 'ad-education-special',
-        title: 'بوابة التعليم المفعّلة الآن',
-        description: 'ابدأ تصفح المشاريع المفعّلة في قطاع التعليم السحابي لتجربة نظام إدارة الفصول السيادية الذكية.',
-        targetUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects'
-      }
-    ]
+const AD_DEMO: Ad = {
+  id: 'demo-ad-1',
+  ad_config: {
+    title: '🚀 منصة ذكاء سهل للتحول الرقمي',
+    description: 'حلول سحابية سيادية متكاملة مع WhatsApp Business API. تواصل معنا لتفعيل قطاعك الرقمي اليوم.',
+    targetUrl: 'https://ai-sahl-vip-land-v1.vercel.app',
+    placement: 'top',
+    lang: 'ar',
   },
-  en: {
-    top: [
-      {
-        id: 'ad-meta-partner',
-        title: 'Instant WhatsApp Business Integration',
-        description: 'Provide official communication channels for your audience connected to central systems via Meta API.',
-        targetUrl: '#whatsapp-info'
-      }
-    ],
-    bottom: [
-      {
-        id: 'ad-education-special',
-        title: 'Active Education Portal Live Now',
-        description: 'Start exploring active projects in the digital education sector to experience sovereign cloud management.',
-        targetUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects'
-      }
-    ]
-  }
 };
 
-// ==========================================
-// 3. AD RENDERER COMPONENT (BLIND QUEUE INJECTION) - TOP LEVEL DEFINITION
-// ==========================================
-const Ad_Renderer_Component = ({ placement, lang }: { placement: 'top' | 'bottom'; lang: 'ar' | 'en' }) => {
-  // جلب الإعلانات النشطة من طابور العرض الإعلاني الديناميكي (Ads Engine) المتطابق مع قاعدة البيانات
-  const currentAdQueue = ADS_DATABASE[lang][placement];
-  if (!currentAdQueue || currentAdQueue.length === 0) return null;
+const AD_FALLBACK: Ad[] = [AD_DEMO];
 
-  const ad = currentAdQueue[0]; // سحب الإعلان المتاح بدون تفعيل تشغيل الفيديوهات حفاظاً على موارد المستأجرين
+// ==========================================
+// 4. SECTOR-PROJECT MAPPING HELPER
+// ==========================================
+
+const SECTOR_KEYWORDS: Record<string, string[]> = {
+  education: ['تعليمي', 'edu_'],
+  health: ['صحي', 'health_'],
+  'real-estate': ['عقاري', 'real_estate_'],
+  commerce: ['تجاري', 'commerce_'],
+};
+
+function mapProjectToSectorId(project: { sector_name?: string; project_slug?: string }): string | null {
+  for (const [sectorId, keywords] of Object.entries(SECTOR_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (project.sector_name?.includes(kw)) return sectorId;
+      if (project.project_slug?.startsWith(kw)) return sectorId;
+    }
+  }
+  return null;
+}
+
+// ==========================================
+// 5. AD RENDERER COMPONENT (PULLS FROM SUPABASE ads_engine)
+// ==========================================
+
+const Ad_Renderer_Component = ({ placement, lang, ads }: { placement: 'top' | 'bottom'; lang: 'ar' | 'en'; ads: Ad[] }) => {
+  let availableAds = ads.filter(a => a.ad_config.placement === placement && a.ad_config.lang === lang);
+  if (availableAds.length === 0) {
+    availableAds = ads.filter(a => a.ad_config.lang === lang);
+  }
+  if (availableAds.length === 0) {
+    availableAds = ads;
+  }
+  if (availableAds.length === 0) return null;
+
+  const ad = availableAds[0];
+  const cfg = ad.ad_config;
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 my-8" id={`ad-holder-${placement}`}>
@@ -267,18 +252,18 @@ const Ad_Renderer_Component = ({ placement, lang }: { placement: 'top' | 'bottom
         <div className="text-right space-y-1">
           <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-pink-500 dark:bg-blue-400 animate-pulse"></span>
-            {ad.title}
+            {cfg.title}
           </h4>
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
-            {ad.description}
+            {cfg.description}
           </p>
         </div>
         <button
           onClick={() => {
-            if (ad.targetUrl.startsWith('http')) {
-              window.open(ad.targetUrl, '_blank');
+            if (cfg.targetUrl.startsWith('http')) {
+              window.open(cfg.targetUrl, '_blank');
             } else {
-              const el = document.querySelector(ad.targetUrl);
+              const el = document.querySelector(cfg.targetUrl);
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }
           }}
@@ -295,6 +280,11 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'pink'>('dark');
   const [lang, setLang] = useState<'ar' | 'en'>('ar');
+
+  // Dynamic data from Supabase
+  const [projects, setProjects] = useState<any[]>([]);
+  const [ads, setAds] = useState<Ad[]>(AD_FALLBACK);
+  const [isDbReady, setIsDbReady] = useState(false);
 
   // Modal Interaction States
   const [selectedSector, setSelectedSector] = useState<any>(null);
@@ -313,7 +303,7 @@ export default function LandingPage() {
       setMounted(true);
       const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'pink';
       const storedLang = localStorage.getItem('lang') as 'ar' | 'en';
-      
+
       if (storedTheme) {
         setTheme(storedTheme);
         document.documentElement.setAttribute('data-theme', storedTheme);
@@ -330,6 +320,47 @@ export default function LandingPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch dynamic data from Supabase (core schema enforced via lib/supabase.ts)
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch project definitions from Supabase with core schema
+        const { data: projectsData, error: projectsError } = await supabase.client
+          .from('project_definitions')
+          .select('*');
+
+        if (projectsError) throw projectsError;
+
+        if (projectsData && projectsData.length > 0) {
+          setProjects(projectsData);
+        } else {
+          // Fallback to static fallbackProjects if DB is empty
+          setProjects(fallbackProjects);
+        }
+
+        // Fetch ads from ads_engine table
+        const { data: adsData, error: adsError } = await supabase.client
+          .from('ads_engine')
+          .select('*');
+
+        if (!adsError && adsData && adsData.length > 0) {
+          setAds(adsData as Ad[]);
+        } else if (!adsError && adsData) {
+          setAds(AD_FALLBACK);
+        }
+        // If ads_engine fetch fails, keep the empty AD_FALLBACK
+
+        setIsDbReady(true);
+      } catch (err) {
+        console.warn('Supabase fetch failed, using fallback data:', err);
+        setProjects(fallbackProjects);
+        setIsDbReady(true);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const changeTheme = (newTheme: 'light' | 'dark' | 'pink') => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
@@ -343,13 +374,28 @@ export default function LandingPage() {
     document.documentElement.lang = newLang;
   };
 
+  // Derive sectors from SECTOR_META + Supabase project data
+  const sectors = SECTOR_META.map(meta => {
+    const sectorProjects = projects.filter(p => mapProjectToSectorId(p as any) === meta.id);
+    const isActive = sectorProjects.some(p => (p as any).is_active === true);
+    return {
+      id: meta.id,
+      name: lang === 'ar' ? meta.nameAr : meta.nameEn,
+      description: lang === 'ar' ? meta.descriptionAr : meta.descriptionEn,
+      iconName: meta.iconName,
+      isActive,
+      linkUrl: meta.linkUrl || null,
+      statusBadge: isActive
+        ? (lang === 'ar' ? 'مفعّل ونشط' : 'Active & Live')
+        : (lang === 'ar' ? 'قيد التطوير' : 'Under Development'),
+    };
+  });
+
   // Handle Sector Actions
   const handleSectorClick = (sector: any) => {
     if (sector.isActive && sector.linkUrl) {
-      // Direct sovereign transition for active sectors
       window.open(sector.linkUrl, '_blank', 'noopener,noreferrer');
     } else {
-      // Open dynamic glass feedback portal for inactive sectors
       setSelectedSector(sector);
       setSuggestion('');
       setContact('');
@@ -360,15 +406,12 @@ export default function LandingPage() {
 
   const handleSuggestionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!suggestion || !contact) return;
 
     setIsSubmitting(true);
-    // Simulating database storage (core table: project_definitions & user requests)
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSubmitted(true);
-      
-      // Save suggestion in localStorage as simulated logging of user feedback
+
       const currentSubmissions = JSON.parse(localStorage.getItem('sector_suggestions') || '[]');
       currentSubmissions.push({
         sectorId: selectedSector.id,
@@ -389,9 +432,8 @@ export default function LandingPage() {
     );
   }
 
-  const currentCopy = LANDING_CONFIG[lang];
+  const currentCopy = UI_TEXT[lang];
 
-  // Helper component to render icons dynamically
   const renderSectorIcon = (iconName: string) => {
     const iconProps = { className: "w-8 h-8 text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform duration-300" };
     switch (iconName) {
@@ -408,11 +450,9 @@ export default function LandingPage() {
     }
   };
 
-  // Note: Ad_Renderer_Component is defined at the top level to conform with React best practices
-
   return (
     <div className="min-h-screen flex flex-col relative transition-colors duration-300">
-      
+
       {/* Background Glows for Sovereign Aesthetics */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/10 dark:bg-blue-600/5 blur-[120px] pointer-events-none animate-pulse-slow"></div>
       <div className="absolute bottom-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-pink-500/10 dark:bg-pink-600/5 blur-[120px] pointer-events-none animate-pulse-slow"></div>
@@ -422,7 +462,7 @@ export default function LandingPage() {
          ========================================== */}
       <header className="glass-nav sticky top-0 z-40 px-4 py-3 md:py-4 transition-all duration-300" id="main-header">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          
+
           {/* Logo */}
           <div className="flex items-center gap-2.5" id="brand-logo">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-pink-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -440,7 +480,7 @@ export default function LandingPage() {
 
           {/* Navigation Controls */}
           <div className="flex items-center gap-2 md:gap-4" id="header-controls">
-            
+
             {/* Language Switcher */}
             <button
               id="lang-toggle-btn"
@@ -489,7 +529,7 @@ export default function LandingPage() {
          ========================================== */}
       <section className="relative px-4 py-16 md:py-24 text-center overflow-hidden" id="hero-section">
         <div className="max-w-5xl mx-auto space-y-8">
-          
+
           {/* Certified sovereign badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 font-bold tracking-wide animate-float" id="sovereign-badge">
             <span className="w-2 py-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
@@ -533,8 +573,8 @@ export default function LandingPage() {
           {/* Stats matrix */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto pt-10" id="stats-grid">
             {currentCopy.stats.map((stat, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="glass-card p-6 rounded-2xl text-center border-white/5 bg-slate-500/5 hover:border-blue-500/30"
                 id={`stat-card-${idx}`}
               >
@@ -547,15 +587,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Injection Area for Central Ads (Top Placement) */}
-      <Ad_Renderer_Component placement="top" lang={lang} />
+      {/* Injection Area for Central Ads (Top Placement) - Pulls from ads_engine via Supabase */}
+      <Ad_Renderer_Component placement="top" lang={lang} ads={ads} />
 
       {/* ==========================================
-          SECTORS SECTION
+          SECTORS SECTION - DYNAMIC FROM SUPABASE
          ========================================== */}
       <section className="px-4 py-16 md:py-20 relative bg-slate-500/[0.02] border-y border-slate-500/5" id="sectors-section">
         <div className="max-w-7xl mx-auto space-y-12">
-          
+
           {/* Header */}
           <div className="text-center space-y-3 max-w-3xl mx-auto">
             <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white" id="sectors-section-title">
@@ -568,9 +608,9 @@ export default function LandingPage() {
 
           {/* Sectors Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="sectors-grid-container">
-            {currentCopy.sectors.map((sector) => (
-              <div 
-                key={sector.id} 
+            {sectors.map((sector) => (
+              <div
+                key={sector.id}
                 className={`glass-card p-6 rounded-3xl flex flex-col justify-between group transition-all duration-300 relative border-white/5 bg-slate-500/5 ${sector.isActive ? 'ring-2 ring-blue-500/30' : ''}`}
                 id={`sector-card-${sector.id}`}
               >
@@ -586,7 +626,7 @@ export default function LandingPage() {
                   <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center mb-2">
                     {renderSectorIcon(sector.iconName)}
                   </div>
-                  
+
                   {/* Name and Description */}
                   <div className="space-y-2">
                     <h4 className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
@@ -598,7 +638,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* Unified CTA Logic - Programmatically Adaptive */}
+                {/* Unified CTA Logic */}
                 <div className="pt-6" id={`sector-action-container-${sector.id}`}>
                   {sector.isActive && sector.linkUrl ? (
                     <button
@@ -630,7 +670,7 @@ export default function LandingPage() {
       {/* Meta API & WA Business Sovereign Info section */}
       <section className="px-4 py-16 max-w-7xl mx-auto" id="meta-compliance-info">
         <div className="glass-card p-8 md:p-12 rounded-3xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center border-white/5 bg-slate-500/5">
-          
+
           <div className="lg:col-span-8 space-y-4 text-right">
             <div className="inline-flex items-center gap-2 text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider" id="meta-integration-title">
               <ShieldCheck className="w-5 h-5 text-pink-500" />
@@ -665,17 +705,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Injection Area for Central Ads (Bottom Placement) */}
-      <Ad_Renderer_Component placement="bottom" lang={lang} />
+      {/* Injection Area for Central Ads (Bottom Placement) - Pulls from ads_engine via Supabase */}
+      <Ad_Renderer_Component placement="bottom" lang={lang} ads={ads} />
 
       {/* ==========================================
-          FOOTER & LEGAL DISCLOSURES
+          FOOTER & LEGAL DISCLOSURES (META COMPLIANCE)
          ========================================== */}
       <footer className="glass-nav mt-auto px-4 py-8 md:py-12 border-t border-slate-500/10 text-right" id="legal-footer">
         <div className="max-w-7xl mx-auto space-y-8">
-          
+
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-            
+
             <div className="md:col-span-6 space-y-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -719,19 +759,26 @@ export default function LandingPage() {
 
       {/* ==========================================
           INTERACTIVE MODAL FOR INACTIVE SECTORS
+          (الصحة، العقارات، التجارة - تفتح نافذة منبثقة)
          ========================================== */}
       {isModalOpen && selectedSector && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300" id="inactive-sector-modal-overlay">
-          <div 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300"
+          id="inactive-sector-modal-overlay"
+          onClick={() => setIsModalOpen(false)}
+        >
+          <div
             className="glass-modal w-full max-w-lg rounded-3xl overflow-hidden p-6 md:p-8 space-y-6 relative border border-white/10"
             id="inactive-sector-modal"
+            onClick={(e) => e.stopPropagation()}
           >
-            
+
             {/* Close Button */}
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 left-4 p-2 rounded-full hover:bg-slate-500/10 text-slate-400 hover:text-slate-100 transition-colors cursor-pointer"
+              className="absolute top-4 left-4 p-2.5 rounded-full bg-slate-800/60 hover:bg-slate-700 text-white hover:text-white shadow-lg backdrop-blur-sm transition-all cursor-pointer z-10"
               id="close-modal-x-btn"
+              title={lang === 'ar' ? 'إغلاق' : 'Close'}
             >
               <X className="w-5 h-5" />
             </button>
@@ -755,15 +802,14 @@ export default function LandingPage() {
             {/* Suggestions Form */}
             {!isSubmitted ? (
               <form onSubmit={handleSuggestionSubmit} className="space-y-4 text-right" id="suggestion-form">
-                
+
                 <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
                   {currentCopy.modal.motivation}
                 </p>
 
-                {/* Textarea */}
+                {/* Textarea for client suggestions */}
                 <div className="space-y-1.5">
                   <textarea
-                    required
                     value={suggestion}
                     onChange={(e) => setSuggestion(e.target.value)}
                     placeholder={currentCopy.modal.placeholderSuggestion}
@@ -773,14 +819,13 @@ export default function LandingPage() {
                   ></textarea>
                 </div>
 
-                {/* Communication Input */}
+                {/* Contact input (email or phone) */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 dark:text-slate-400 block">
                     {currentCopy.modal.contactLabel}
                   </label>
                   <input
                     type="text"
-                    required
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
                     placeholder={currentCopy.modal.placeholderContact}
@@ -842,10 +887,15 @@ export default function LandingPage() {
           INTERACTIVE MODAL FOR LEGAL LINKS
          ========================================== */}
       {activeLegalModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300" id="legal-modal-overlay">
-          <div 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md transition-all duration-300"
+          id="legal-modal-overlay"
+          onClick={() => setActiveLegalModal(null)}
+        >
+          <div
             className="glass-modal w-full max-w-md rounded-3xl overflow-hidden p-6 md:p-8 space-y-5 relative border border-white/10"
             id="legal-modal"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Close Button */}
             <button
