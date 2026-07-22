@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import { Cairo } from 'next/font/google';
 import './globals.css';
+import { AppProviders } from './providers';
+import { OfflineBanner } from '@/components/offline-banner';
+import { ServiceWorkerRegister } from '@/components/service-worker-register';
 
 const cairo = Cairo({
   subsets: ['arabic', 'latin'],
@@ -17,7 +20,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
       <body suppressHydrationWarning className="font-sans antialiased">
-        {children}
+        <AppProviders>
+          <OfflineBanner />
+          <ServiceWorkerRegister />
+          {children}
+        </AppProviders>
       </body>
     </html>
   );

@@ -32,36 +32,28 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           queries: {
             refetchOnWindowFocus: false,
             retry: 1,
-            staleTime: 1000 * 60 * 5, // 5 minutes caching
+            staleTime: 1000 * 60 * 10, // 10 minutes caching
           },
         },
       })
   );
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("thakaa_theme") as Theme;
-      if (savedTheme && ["light", "dark", "pink"].includes(savedTheme)) {
-        return savedTheme;
-      }
-    }
-    return "dark";
-  });
-
-  const [lang, setLang] = useState<Lang>(() => {
-    if (typeof window !== "undefined") {
-      const savedLang = localStorage.getItem("thakaa_lang") as Lang;
-      if (savedLang && ["ar", "en"].includes(savedLang)) {
-        return savedLang;
-      }
-    }
-    return "ar";
-  });
-
   const [mounted, setMounted] = useState(false);
+  const [theme, setTheme] = useState<Theme>("dark");
+  const [lang, setLang] = useState<Lang>("ar");
 
   useEffect(() => {
-    // Apply attributes immediately
+    const savedTheme = (localStorage.getItem("aisahl-theme") || localStorage.getItem("theme")) as Theme;
+    if (savedTheme && ["light", "dark", "pink"].includes(savedTheme)) {
+      setTheme(savedTheme);
+    }
+    const savedLang = (localStorage.getItem("aisahl-lang") || localStorage.getItem("lang")) as Lang;
+    if (savedLang && ["ar", "en"].includes(savedLang)) {
+      setLang(savedLang);
+    }
+  }, []);
+
+  useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     document.documentElement.setAttribute("lang", lang);
     document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
@@ -83,14 +75,16 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     }
     
     setTheme(nextTheme);
-    localStorage.setItem("thakaa_theme", nextTheme);
+    localStorage.setItem("aisahl-theme", nextTheme);
+    localStorage.setItem("theme", nextTheme);
     document.documentElement.setAttribute("data-theme", nextTheme);
   };
 
   const toggleLang = (newLang?: Lang) => {
     const nextLang = newLang || (lang === "ar" ? "en" : "ar");
     setLang(nextLang);
-    localStorage.setItem("thakaa_lang", nextLang);
+    localStorage.setItem("aisahl-lang", nextLang);
+    localStorage.setItem("lang", nextLang);
     document.documentElement.setAttribute("lang", nextLang);
     document.documentElement.setAttribute("dir", nextLang === "ar" ? "rtl" : "ltr");
   };

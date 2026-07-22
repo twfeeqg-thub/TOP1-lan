@@ -22,7 +22,10 @@ import {
   Building,
   Briefcase
 } from 'lucide-react';
-import { supabase, fallbackProjects } from '@/lib/supabase';
+import { useApp } from './providers';
+import { useProjects, useAds } from '@/hooks/use-projects';
+import { clearCache } from '@/lib/db';
+import { Ad_Renderer_Component, AD_FALLBACK, type Ad } from '@/components/ad-renderer';
 
 // ==========================================
 // 1. UI TEXT CONFIGURATION (PRESENTATION ONLY - NO MOCK DATA)
@@ -181,29 +184,7 @@ const SECTOR_META: {
 // 3. ADS FALLBACK (EMPTY - LAST RESORT)
 // ==========================================
 
-interface Ad {
-  id: string;
-  ad_config: {
-    title: string;
-    description: string;
-    targetUrl: string;
-    placement: 'top' | 'bottom';
-    lang: 'ar' | 'en';
-  };
-}
 
-const AD_DEMO: Ad = {
-  id: 'demo-ad-1',
-  ad_config: {
-    title: '🚀 منصة ذكاء سهل للتحول الرقمي',
-    description: 'حلول سحابية سيادية متكاملة مع WhatsApp Business API. تواصل معنا لتفعيل قطاعك الرقمي اليوم.',
-    targetUrl: 'https://ai-sahl-vip-land-v1.vercel.app',
-    placement: 'top',
-    lang: 'ar',
-  },
-};
-
-const AD_FALLBACK: Ad[] = [AD_DEMO];
 
 // ==========================================
 // 4. SECTOR-PROJECT MAPPING HELPER
@@ -226,65 +207,12 @@ function mapProjectToSectorId(project: { sector_name?: string; project_slug?: st
   return null;
 }
 
-// ==========================================
-// 5. AD RENDERER COMPONENT (PULLS FROM SUPABASE ads_engine)
-// ==========================================
-
-const Ad_Renderer_Component = ({ placement, lang, ads }: { placement: 'top' | 'bottom'; lang: 'ar' | 'en'; ads: Ad[] }) => {
-  let availableAds = ads.filter(a => a.ad_config.placement === placement && a.ad_config.lang === lang);
-  if (availableAds.length === 0) {
-    availableAds = ads.filter(a => a.ad_config.lang === lang);
-  }
-  if (availableAds.length === 0) {
-    availableAds = ads;
-  }
-  if (availableAds.length === 0) return null;
-
-  const ad = availableAds[0];
-  const cfg = ad.ad_config;
-
-  return (
-    <div className="w-full max-w-6xl mx-auto px-4 my-8" id={`ad-holder-${placement}`}>
-      <div className="glass-card relative overflow-hidden rounded-2xl p-5 md:p-6 flex flex-col md:flex-row items-center justify-between gap-5 border-r-4 border-r-pink-500 dark:border-r-blue-500">
-        <span className="absolute top-2 left-3 text-[9px] uppercase tracking-wider text-slate-400/80 bg-slate-500/10 px-2 py-0.5 rounded border border-slate-500/10">
-          {lang === 'ar' ? 'مساحة إعلانية مدمجة' : 'Central Ad Node'}
-        </span>
-        <div className="text-right space-y-1">
-          <h4 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-pink-500 dark:bg-blue-400 animate-pulse"></span>
-            {cfg.title}
-          </h4>
-          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-3xl leading-relaxed">
-            {cfg.description}
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            if (cfg.targetUrl.startsWith('http')) {
-              window.open(cfg.targetUrl, '_blank');
-            } else {
-              const el = document.querySelector(cfg.targetUrl);
-              if (el) el.scrollIntoView({ behavior: 'smooth' });
-            }
-          }}
-          className="glass-button text-xs font-semibold py-2.5 px-5 rounded-xl border border-white/10 shadow-sm whitespace-nowrap cursor-pointer hover:bg-slate-500/10"
-        >
-          {lang === 'ar' ? 'زيارة العرض' : 'View Offer'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
 export default function LandingPage() {
-  const [mounted, setMounted] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'pink'>('dark');
-  const [lang, setLang] = useState<'ar' | 'en'>('ar');
+  const { theme, lang, toggleTheme, toggleLang } = useApp();
 
-  // Dynamic data from Supabase
-  const [projects, setProjects] = useState<any[]>([]);
-  const [ads, setAds] = useState<Ad[]>(AD_FALLBACK);
-  const [isDbReady, setIsDbReady] = useState(false);
+  const { data: projects = [] } = useProjects();
+  const { data: adsRaw } = useAds();
+  const ads = Array.isArray(adsRaw) && adsRaw.length > 0 ? adsRaw : AD_FALLBACK;
 
   // Modal Interaction States
   const [selectedSector, setSelectedSector] = useState<any>(null);
@@ -297,87 +225,10 @@ export default function LandingPage() {
   // Legal Popups Modal State
   const [activeLegalModal, setActiveLegalModal] = useState<{title: string, content: string} | null>(null);
 
-  // Initialize and load configurations
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setMounted(true);
-      const storedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'pink';
-      const storedLang = localStorage.getItem('lang') as 'ar' | 'en';
-
-      if (storedTheme) {
-        setTheme(storedTheme);
-        document.documentElement.setAttribute('data-theme', storedTheme);
-      } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
-
-      if (storedLang) {
-        setLang(storedLang);
-        document.documentElement.dir = storedLang === 'ar' ? 'rtl' : 'ltr';
-        document.documentElement.lang = storedLang;
-      }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Fetch dynamic data from Supabase (core schema enforced via lib/supabase.ts)
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        // Fetch project definitions from Supabase with core schema
-        const { data: projectsData, error: projectsError } = await supabase.client
-          .from('project_definitions')
-          .select('*');
-
-        if (projectsError) throw projectsError;
-
-        if (projectsData && projectsData.length > 0) {
-          setProjects(projectsData);
-        } else {
-          // Fallback to static fallbackProjects if DB is empty
-          setProjects(fallbackProjects);
-        }
-
-        // Fetch ads from ads_engine table
-        const { data: adsData, error: adsError } = await supabase.client
-          .from('ads_engine')
-          .select('*');
-
-        if (!adsError && adsData && adsData.length > 0) {
-          setAds(adsData as Ad[]);
-        } else if (!adsError && adsData) {
-          setAds(AD_FALLBACK);
-        }
-        // If ads_engine fetch fails, keep the empty AD_FALLBACK
-
-        setIsDbReady(true);
-      } catch (err) {
-        console.warn('Supabase fetch failed, using fallback data:', err);
-        setProjects(fallbackProjects);
-        setIsDbReady(true);
-      }
-    }
-
-    fetchData();
-  }, []);
-
-  const changeTheme = (newTheme: 'light' | 'dark' | 'pink') => {
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme);
-  };
-
-  const changeLang = (newLang: 'ar' | 'en') => {
-    setLang(newLang);
-    localStorage.setItem('lang', newLang);
-    document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.lang = newLang;
-  };
-
   // Derive sectors from SECTOR_META + Supabase project data
   const sectors = SECTOR_META.map(meta => {
-    const sectorProjects = projects.filter(p => mapProjectToSectorId(p as any) === meta.id);
-    const isActive = sectorProjects.some(p => (p as any).is_active === true);
+    const sectorProjects = projects.filter((p: Record<string, unknown>) => mapProjectToSectorId(p as any) === meta.id);
+    const isActive = sectorProjects.some((p: Record<string, unknown>) => (p as any).is_active === true);
     return {
       id: meta.id,
       name: lang === 'ar' ? meta.nameAr : meta.nameEn,
@@ -423,14 +274,6 @@ export default function LandingPage() {
       localStorage.setItem('sector_suggestions', JSON.stringify(currentSubmissions));
     }, 1200);
   };
-
-  if (!mounted) {
-    return (
-      <div className="min-h-screen bg-[#090d16] flex items-center justify-center">
-        <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
 
   const currentCopy = UI_TEXT[lang];
 
@@ -484,7 +327,7 @@ export default function LandingPage() {
             {/* Language Switcher */}
             <button
               id="lang-toggle-btn"
-              onClick={() => changeLang(lang === 'ar' ? 'en' : 'ar')}
+              onClick={() => toggleLang(lang === 'ar' ? 'en' : 'ar')}
               className="glass-button text-xs py-2 px-3 md:px-4 rounded-xl flex items-center gap-2 font-semibold hover:bg-slate-500/10 transition-colors"
               title={lang === 'ar' ? 'Switch to English' : 'التحويل للعربية'}
             >
@@ -496,7 +339,7 @@ export default function LandingPage() {
             <div className="flex items-center bg-slate-500/10 p-1.5 rounded-2xl border border-white/5" id="theme-selectors-container">
               <button
                 id="theme-btn-light"
-                onClick={() => changeTheme('light')}
+                onClick={() => toggleTheme('light')}
                 className={`p-1.5 rounded-lg theme-btn-transition transition-all ${theme === 'light' ? 'bg-white text-slate-900 shadow-md scale-105' : 'text-slate-400 hover:text-slate-100'}`}
                 title="Light Theme"
               >
@@ -504,7 +347,7 @@ export default function LandingPage() {
               </button>
               <button
                 id="theme-btn-dark"
-                onClick={() => changeTheme('dark')}
+                onClick={() => toggleTheme('dark')}
                 className={`p-1.5 rounded-lg theme-btn-transition transition-all ${theme === 'dark' ? 'bg-slate-800 text-slate-100 shadow-md scale-105' : 'text-slate-400 hover:text-slate-100'}`}
                 title="Dark Theme"
               >
@@ -512,7 +355,7 @@ export default function LandingPage() {
               </button>
               <button
                 id="theme-btn-pink"
-                onClick={() => changeTheme('pink')}
+                onClick={() => toggleTheme('pink')}
                 className={`p-1.5 rounded-lg theme-btn-transition transition-all ${theme === 'pink' ? 'bg-pink-500 text-white shadow-md scale-105' : 'text-pink-400 hover:text-pink-100'}`}
                 title="Pink Theme"
               >
@@ -666,6 +509,9 @@ export default function LandingPage() {
 
         </div>
       </section>
+
+      {/* Injection Area for Central Ads (Middle Placement) - بين الأقسام */}
+      <Ad_Renderer_Component placement="middle" lang={lang} ads={ads} />
 
       {/* Meta API & WA Business Sovereign Info section */}
       <section className="px-4 py-16 max-w-7xl mx-auto" id="meta-compliance-info">
@@ -927,6 +773,21 @@ export default function LandingPage() {
           </div>
         </div>
       )}
+
+      {/* 🛠 DEV TOOL: CACHE DESTROYER - إزالة قبل الإنتاج */}
+      <div className="fixed bottom-4 left-4 z-[999] opacity-30 hover:opacity-100 transition-opacity">
+        <button
+          onClick={async () => {
+            await clearCache();
+            localStorage.clear();
+            window.location.reload();
+          }}
+          className="text-[10px] bg-red-600/80 text-white px-2.5 py-1 rounded font-mono"
+          title="مسح الكاش المحلي و localStorage وإعادة التحميل"
+        >
+          🧨 تدمير الكاش
+        </button>
+      </div>
 
     </div>
   );
