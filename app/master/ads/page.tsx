@@ -4,7 +4,7 @@ import { motion } from 'motion/react'
 import { BarChart3, MousePointerClick, Eye, DollarSign } from 'lucide-react'
 
 const ads = [
-  { title: 'تخفيضات رمضان', platform: 'فيسبوك', budget: '$2,500', clicks: '12.4K', impressions: '89K', status: 'نشط', color: 'bg-indigo-500' },
+  { title: 'تخفيضات رمضان', platform: 'فيسبوك', budget: '$2,500', clicks: '12.4K', impressions: '89K', status: 'نشط', color: 'bg-[var(--primary)]' },
   { title: 'إطلاق المنصة', platform: 'تويتر', budget: '$1,800', clicks: '8.2K', impressions: '45K', status: 'نشط', color: 'bg-emerald-500' },
   { title: 'حملة العودة للمدارس', platform: 'إنستغرام', budget: '$3,200', clicks: '15.7K', impressions: '120K', status: 'متوقف', color: 'bg-amber-500' },
 ]
@@ -26,11 +26,11 @@ export default function AdsPage() {
             transition={{ delay: i * 0.08 }}
             className="glass-card rounded-2xl p-5"
           >
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-3">
-              <item.icon className="w-4 h-4 text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center mb-3">
+              <item.icon className="w-4 h-4 text-[var(--primary)]" />
             </div>
-            <p className="text-2xl font-bold text-white tracking-tight mb-1">{item.value}</p>
-            <p className="text-sm text-white/50">{item.label}</p>
+            <p className="text-2xl font-bold text-[var(--text-main)] tracking-tight mb-1">{item.value}</p>
+            <p className="text-sm text-[var(--text-muted)]">{item.label}</p>
           </motion.div>
         ))}
       </div>
@@ -44,23 +44,23 @@ export default function AdsPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الإعلان</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">المنصة</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الميزانية</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">النقرات</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">المشاهدات</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الحالة</th>
+              <tr className="border-b border-[var(--sidebar-border)]">
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الإعلان</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">المنصة</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الميزانية</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">النقرات</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">المشاهدات</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الحالة</th>
               </tr>
             </thead>
             <tbody>
               {ads.map((ad, i) => (
-                <tr key={ad.title} className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors">
-                  <td className="px-5 py-4 text-sm font-medium text-white">{ad.title}</td>
-                  <td className="px-5 py-4 text-sm text-white/50">{ad.platform}</td>
-                  <td className="px-5 py-4 text-sm text-white/50">{ad.budget}</td>
-                  <td className="px-5 py-4 text-sm text-white/50">{ad.clicks}</td>
-                  <td className="px-5 py-4 text-sm text-white/50">{ad.impressions}</td>
+                <tr key={ad.title} className="border-b border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover-bg)] transition-colors">
+                  <td className="px-5 py-4 text-sm font-medium text-[var(--text-main)]">{ad.title}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{ad.platform}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{ad.budget}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{ad.clicks}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{ad.impressions}</td>
                   <td className="px-5 py-4">
                     <span className={`text-xs px-2.5 py-1 rounded-full ${ad.status === 'نشط' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}`}>
                       {ad.status}

@@ -14,7 +14,7 @@ const features = [
 
 const statusColors: Record<string, string> = {
   'منفذ': 'bg-emerald-500/10 text-emerald-400',
-  'قيد التطوير': 'bg-indigo-500/10 text-indigo-400',
+  'قيد التطوير': 'bg-[var(--primary-light)] text-[var(--primary)]',
   'مخطط': 'bg-amber-500/10 text-amber-400',
 }
 
@@ -36,18 +36,18 @@ export default function FeaturesPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.08 }}
-              className="glass-card rounded-2xl p-5 group hover:border-indigo-500/20"
+              className="glass-card rounded-2xl p-5 group hover:border-[var(--primary)]/20"
             >
-              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-4 group-hover:bg-indigo-500/20 transition-colors">
-                <Icon className="w-5 h-5 text-indigo-400" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] flex items-center justify-center mb-4 group-hover:bg-[var(--sidebar-active-bg)] transition-colors">
+                <Icon className="w-5 h-5 text-[var(--primary)]" />
               </div>
-              <h3 className="text-base font-bold text-white mb-1">{feature.name}</h3>
-              <p className="text-sm text-white/50 mb-3">{feature.description}</p>
+              <h3 className="text-base font-bold text-[var(--text-main)] mb-1">{feature.name}</h3>
+              <p className="text-sm text-[var(--text-muted)] mb-3">{feature.description}</p>
               <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[feature.status] || 'bg-white/5 text-white/40'}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[feature.status] || 'bg-[var(--sidebar-hover-bg)] text-[var(--text-muted)]'}`}>
                   {feature.status}
                 </span>
-                <span className={`text-xs ${priorityColors[feature.priority] || 'text-white/40'}`}>
+                <span className={`text-xs ${priorityColors[feature.priority] || 'text-[var(--text-muted)]'}`}>
                   {feature.priority}
                 </span>
               </div>

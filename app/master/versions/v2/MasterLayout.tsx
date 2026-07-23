@@ -12,7 +12,7 @@ export function MasterLayoutV2({ children }: { children: ReactNode }) {
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#090d16]">
+    <div className="flex h-screen overflow-hidden bg-[var(--bg-main)]">
       <SidebarV2 collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <div
         className="flex-1 flex flex-col transition-all duration-300"

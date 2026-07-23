@@ -28,11 +28,11 @@ export default function UsersPage() {
             transition={{ delay: i * 0.08 }}
             className="glass-card rounded-2xl p-5"
           >
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-3">
-              <item.icon className="w-4 h-4 text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center mb-3">
+              <item.icon className="w-4 h-4 text-[var(--primary)]" />
             </div>
-            <p className="text-2xl font-bold text-white tracking-tight mb-1">{item.value}</p>
-            <p className="text-sm text-white/50">{item.label}</p>
+            <p className="text-2xl font-bold text-[var(--text-main)] tracking-tight mb-1">{item.value}</p>
+            <p className="text-sm text-[var(--text-muted)]">{item.label}</p>
           </motion.div>
         ))}
       </div>
@@ -46,12 +46,12 @@ export default function UsersPage() {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الاسم</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الهاتف</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الدور</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">الحالة</th>
-                <th className="text-right px-5 py-4 text-xs font-medium text-white/40 tracking-wider">المشاريع</th>
+              <tr className="border-b border-[var(--sidebar-border)]">
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الاسم</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الهاتف</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الدور</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الحالة</th>
+                <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">المشاريع</th>
               </tr>
             </thead>
             <tbody>
@@ -61,26 +61,26 @@ export default function UsersPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.08 }}
-                  className="border-b border-white/[0.02] hover:bg-white/[0.02] transition-colors"
+                  className="border-b border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover-bg)] transition-colors"
                 >
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                        <span className="text-indigo-400 text-xs font-bold">{u.name[0]}</span>
+                      <div className="w-8 h-8 rounded-full bg-[var(--primary-light)] flex items-center justify-center">
+                        <span className="text-[var(--primary)] text-xs font-bold">{u.name[0]}</span>
                       </div>
-                      <span className="text-sm font-medium text-white">{u.name}</span>
+                      <span className="text-sm font-medium text-[var(--text-main)]">{u.name}</span>
                     </div>
                   </td>
-                  <td className="px-5 py-4 text-sm text-white/50">{u.phone}</td>
-                  <td className="px-5 py-4 text-sm text-white/50">{u.role}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{u.phone}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{u.role}</td>
                   <td className="px-5 py-4">
                     <span className={`text-xs px-2.5 py-1 rounded-full ${
-                      u.status === 'نشط' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/40'
+                      u.status === 'نشط' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[var(--sidebar-hover-bg)] text-[var(--text-muted)]'
                     }`}>
                       {u.status}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-sm text-white/50">{u.projects}</td>
+                  <td className="px-5 py-4 text-sm text-[var(--text-muted)]">{u.projects}</td>
                 </motion.tr>
               ))}
             </tbody>

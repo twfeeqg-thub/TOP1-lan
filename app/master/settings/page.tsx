@@ -21,10 +21,10 @@ export default function SettingsPage() {
           title: 'الواجهة',
           icon: Palette,
           content: (
-            <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.02]">
+            <div className="flex items-center justify-between py-3 px-4 rounded-xl bg-[var(--sidebar-hover-bg)]">
               <div>
-                <p className="text-sm text-white/80">الثيم</p>
-                <p className="text-xs text-white/40">اختر نمط الواجهة</p>
+                <p className="text-sm text-[var(--text-main)]">الثيم</p>
+                <p className="text-xs text-[var(--text-muted)]">اختر نمط الواجهة</p>
               </div>
               <ThemeSwitcher />
             </div>
@@ -50,10 +50,10 @@ export default function SettingsPage() {
             className="glass-card rounded-2xl p-6"
           >
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                <Icon className="w-4 h-4 text-indigo-400" />
+              <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center">
+                <Icon className="w-4 h-4 text-[var(--primary)]" />
               </div>
-              <h2 className="text-base font-bold text-white">{section.title}</h2>
+              <h2 className="text-base font-bold text-[var(--text-main)]">{section.title}</h2>
             </div>
 
             {'content' in section && section.content}
@@ -63,10 +63,10 @@ export default function SettingsPage() {
                 {section.fields.map((field) => (
                   <div
                     key={field.label}
-                    className="flex items-center justify-between py-3 px-4 rounded-xl bg-white/[0.02]"
+                    className="flex items-center justify-between py-3 px-4 rounded-xl bg-[var(--sidebar-hover-bg)]"
                   >
-                    <span className="text-sm text-white/80">{field.label}</span>
-                    <span className={`text-sm ${field.color || 'text-white/50'}`}>
+                    <span className="text-sm text-[var(--text-main)]">{field.label}</span>
+                    <span className={`text-sm ${field.color || 'text-[var(--text-muted)]'}`}>
                       {field.value}
                     </span>
                   </div>

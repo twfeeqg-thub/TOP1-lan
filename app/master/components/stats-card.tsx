@@ -22,8 +22,8 @@ export function StatsCard({ title, value, change, up, icon: Icon, index = 0 }: S
       className="glass-card rounded-2xl p-5 group cursor-default"
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center group-hover:bg-indigo-500/20 transition-colors duration-300">
-          <Icon className="w-5 h-5 text-indigo-400" />
+        <div className="w-10 h-10 rounded-xl bg-[var(--primary-light)] flex items-center justify-center group-hover:bg-[var(--sidebar-active-bg)] transition-colors duration-300">
+          <Icon className="w-5 h-5 text-[var(--primary)]" />
         </div>
         <span
           className={cn(
@@ -34,8 +34,8 @@ export function StatsCard({ title, value, change, up, icon: Icon, index = 0 }: S
           {up ? '↑' : '↓'} {change}
         </span>
       </div>
-      <p className="text-2xl font-bold tracking-tight text-white mb-1">{value}</p>
-      <p className="text-sm text-white/50">{title}</p>
+      <p className="text-2xl font-bold tracking-tight text-[var(--text-main)] mb-1">{value}</p>
+      <p className="text-sm text-[var(--text-muted)]">{title}</p>
     </motion.div>
   )
 }

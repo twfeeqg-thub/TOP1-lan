@@ -20,14 +20,14 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
     <motion.aside
       animate={{ width: collapsed ? 64 : 260 }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#070b14] border-l border-white/5 overflow-hidden"
+      className="fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[var(--sidebar-bg)] border-l border-[var(--sidebar-border)] overflow-hidden"
     >
       <SidebarLogo collapsed={collapsed} />
 
       <div className="flex justify-center pt-2 pb-1">
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+          className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
         >
           {collapsed ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -52,8 +52,8 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
               className={cn(
                 'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative whitespace-nowrap',
                 active
-                  ? 'text-indigo-400 bg-indigo-500/10'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/5',
+                  ? 'text-[var(--sidebar-active-text)] bg-[var(--sidebar-active-bg)]'
+                  : 'text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover-bg)]',
                 collapsed && 'justify-center px-0 mx-auto w-10 h-10'
               )}
               title={collapsed ? item.labelAr : undefined}
@@ -61,7 +61,7 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
               {active && !collapsed && (
                 <motion.div
                   layoutId="v2-active-indicator"
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[var(--primary)] shadow-[0_0_8px_var(--glow-color)]"
                 />
               )}
               <Icon className="w-5 h-5 shrink-0" />
@@ -79,19 +79,19 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
         })}
       </nav>
 
-      <div className={cn('border-t border-white/5 p-4', collapsed && 'p-2 flex justify-center')}>
+      <div className={cn('border-t border-[var(--sidebar-border)] p-4', collapsed && 'p-2 flex justify-center')}>
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-          <div className="w-9 h-9 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
-            <span className="text-indigo-400 text-sm font-bold">
+          <div className="w-9 h-9 rounded-full bg-[var(--sidebar-active-bg)] flex items-center justify-center shrink-0">
+            <span className="text-[var(--sidebar-active-text)] text-sm font-bold">
               {(user?.name || 'A')[0]}
             </span>
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-white truncate">
+              <p className="text-sm font-medium text-[var(--sidebar-text)] truncate">
                 {user?.name || 'Admin'}
               </p>
-              <p className="text-[11px] text-white/40">Super Admin</p>
+              <p className="text-[11px] text-[var(--sidebar-text-muted)]">Super Admin</p>
             </div>
           )}
         </div>
