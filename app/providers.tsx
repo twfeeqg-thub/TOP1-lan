@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AuthProvider } from "@/context/AuthContext";
 
 export type Theme = "light" | "dark" | "pink";
 export type Lang = "ar" | "en";
@@ -92,9 +93,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AppContext.Provider value={{ theme, lang, toggleTheme, toggleLang }}>
-        <div style={{ visibility: mounted ? "visible" : "hidden" }}>
-          {children}
-        </div>
+        <AuthProvider>
+          <div style={{ visibility: mounted ? "visible" : "hidden" }}>
+            {children}
+          </div>
+        </AuthProvider>
       </AppContext.Provider>
     </QueryClientProvider>
   );

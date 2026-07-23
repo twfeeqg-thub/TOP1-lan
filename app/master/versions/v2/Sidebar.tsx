@@ -1,0 +1,101 @@
+'use client'
+
+import Link from 'next/link'
+import { motion } from 'motion/react'
+import { useNavItems } from '../../components/nav-items'
+import { SidebarLogo } from '../../components/sidebar-logo'
+import { useAuth } from '@/context/AuthContext'
+import { cn } from '@/lib/utils'
+
+interface SidebarV2Props {
+  collapsed: boolean
+  onToggle: () => void
+}
+
+export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
+  const { navItems, isActive } = useNavItems()
+  const { user } = useAuth()
+
+  return (
+    <motion.aside
+      animate={{ width: collapsed ? 64 : 260 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+      className="fixed right-0 top-0 bottom-0 z-40 flex flex-col bg-[#070b14] border-l border-white/5 overflow-hidden"
+    >
+      <SidebarLogo collapsed={collapsed} />
+
+      <div className="flex justify-center pt-2 pb-1">
+        <button
+          onClick={onToggle}
+          className="p-1.5 rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-all"
+        >
+          {collapsed ? (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
+        {navItems.map((item) => {
+          const active = isActive(item.href)
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={cn(
+                'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative whitespace-nowrap',
+                active
+                  ? 'text-indigo-400 bg-indigo-500/10'
+                  : 'text-white/50 hover:text-white/80 hover:bg-white/5',
+                collapsed && 'justify-center px-0 mx-auto w-10 h-10'
+              )}
+              title={collapsed ? item.labelAr : undefined}
+            >
+              {active && !collapsed && (
+                <motion.div
+                  layoutId="v2-active-indicator"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                />
+              )}
+              <Icon className="w-5 h-5 shrink-0" />
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 1 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  {item.labelAr}
+                </motion.span>
+              )}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div className={cn('border-t border-white/5 p-4', collapsed && 'p-2 flex justify-center')}>
+        <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
+          <div className="w-9 h-9 rounded-full bg-indigo-500/20 flex items-center justify-center shrink-0">
+            <span className="text-indigo-400 text-sm font-bold">
+              {(user?.name || 'A')[0]}
+            </span>
+          </div>
+          {!collapsed && (
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium text-white truncate">
+                {user?.name || 'Admin'}
+              </p>
+              <p className="text-[11px] text-white/40">Super Admin</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.aside>
+  )
+}
