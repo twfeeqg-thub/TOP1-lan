@@ -26,6 +26,7 @@ import { useApp } from './providers';
 import { useProjects, useAds } from '@/hooks/use-projects';
 import { clearCache } from '@/lib/db';
 import { Ad_Renderer_Component, AD_FALLBACK, type Ad } from '@/components/ad-renderer';
+import { ClientAdRequestModal } from '@/components/ads/client-ad-request-modal';
 
 // ==========================================
 // 1. UI TEXT CONFIGURATION (PRESENTATION ONLY - NO MOCK DATA)
@@ -224,6 +225,7 @@ export default function LandingPage() {
 
   // Legal Popups Modal State
   const [activeLegalModal, setActiveLegalModal] = useState<{title: string, content: string} | null>(null);
+  const [adRequestModal, setAdRequestModal] = useState(false);
 
   // Derive sectors from SECTOR_META + Supabase project data
   const sectors = SECTOR_META.map(meta => {
@@ -432,6 +434,14 @@ export default function LandingPage() {
 
       {/* Injection Area for Central Ads (Top Placement) - Pulls from ads_engine via Supabase */}
       <Ad_Renderer_Component placement="top" lang={lang} ads={ads} />
+      <div className="flex justify-center -mt-4 mb-2">
+        <button
+          onClick={() => setAdRequestModal(true)}
+          className="text-xs text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors underline underline-offset-4 decoration-dotted decoration-[var(--text-muted)]/30 hover:decoration-[var(--primary)]/50"
+        >
+          أضغط هنا لإضافة إعلانك الخاص
+        </button>
+      </div>
 
       {/* ==========================================
           SECTORS SECTION - DYNAMIC FROM SUPABASE
@@ -773,6 +783,8 @@ export default function LandingPage() {
           </div>
         </div>
       )}
+
+      <ClientAdRequestModal open={adRequestModal} onClose={() => setAdRequestModal(false)} />
 
       {/* 🛠 DEV TOOL: CACHE DESTROYER - إزالة قبل الإنتاج */}
       <div className="fixed bottom-4 left-4 z-[999] opacity-30 hover:opacity-100 transition-opacity">
