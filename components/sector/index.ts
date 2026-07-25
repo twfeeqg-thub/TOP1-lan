@@ -1,0 +1,7 @@
+export { default as DynamicHero } from './DynamicHero'
+export { default as DynamicProjects } from './DynamicProjects'
+export { default as DynamicAbout } from './DynamicAbout'
+export { default as DynamicTestimonials } from './DynamicTestimonials'
+export { default as DynamicFAQ } from './DynamicFAQ'
+export { default as DynamicPartners } from './DynamicPartners'
+export { default as DynamicLegalFooter } from './DynamicLegalFooter'

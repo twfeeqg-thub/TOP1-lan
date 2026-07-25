@@ -1,22 +1,22 @@
-'use client';
+'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
-import { motion, AnimatePresence } from 'motion/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react'
+import Image from 'next/image'
+import { motion, AnimatePresence } from 'motion/react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export interface Ad {
-  id: string;
+  id: string
   ad_config: {
-    title: string;
-    description: string;
-    targetUrl: string;
-    placement: 'top' | 'middle' | 'bottom';
-    lang: 'ar' | 'en';
-    is_fixed?: boolean;
-    is_exclusive?: boolean;
-  };
-  media_url?: string;
+    title: string
+    description: string
+    targetUrl: string
+    placement: 'top' | 'middle' | 'bottom'
+    lang: 'ar' | 'en'
+    is_fixed?: boolean
+    is_exclusive?: boolean
+  }
+  media_url?: string
 }
 
 function buildFallbackAds(): Ad[] {
@@ -69,69 +69,97 @@ function buildFallbackAds(): Ad[] {
         placement: 'bottom', lang: 'en',
       },
     },
-  ];
+  ]
 }
 
-export const AD_FALLBACK: Ad[] = buildFallbackAds();
+export const AD_FALLBACK: Ad[] = buildFallbackAds()
 
-export const Ad_Renderer_Component = ({ placement, lang, ads }: { placement: 'top' | 'middle' | 'bottom'; lang: 'ar' | 'en'; ads: Ad[] }) => {
-  const safeAds = Array.isArray(ads) && ads.length > 0 ? ads : AD_FALLBACK;
-  let filteredAds = safeAds.filter(a => a?.ad_config?.placement === placement && a?.ad_config?.lang === lang);
-  if (filteredAds.length === 0) {
-    filteredAds = safeAds.filter(a => a?.ad_config?.lang === lang);
-  }
-  if (filteredAds.length === 0) {
-    filteredAds = safeAds;
-  }
-  if (filteredAds.length === 0) {
-    return null;
-  }
-
-  const pinnedAd = filteredAds.find(a => a?.ad_config?.is_fixed || a?.ad_config?.is_exclusive);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const isSlider = !pinnedAd && filteredAds.length > 1;
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const startTimer = useCallback(() => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setCurrentIndex(prev => (prev + 1) % filteredAds.length);
-    }, 5000);
-  }, [filteredAds.length]);
+export const Ad_Renderer_Component = ({
+  placement,
+  lang,
+  ads,
+  isPremiumUser = false,
+}: {
+  placement: 'top' | 'middle' | 'bottom'
+  lang: 'ar' | 'en'
+  ads: Ad[]
+  isPremiumUser?: boolean
+}) => {
+  const [killSwitchActive, setKillSwitchActive] = useState(false)
+  const [killSwitchLoaded, setKillSwitchLoaded] = useState(false)
 
   useEffect(() => {
-    if (!isSlider) return;
-    startTimer();
+    let cancelled = false
+    fetch('/api/master/ads/kill-switch')
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) {
+          setKillSwitchActive(json?.data?.active === true)
+          setKillSwitchLoaded(true)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setKillSwitchLoaded(true)
+        }
+      })
+    return () => { cancelled = true }
+  }, [])
+
+  const safeAds = Array.isArray(ads) && ads.length > 0 ? ads : AD_FALLBACK
+  let filteredAds = safeAds.filter(a => a?.ad_config?.placement === placement && a?.ad_config?.lang === lang)
+  if (filteredAds.length === 0) {
+    filteredAds = safeAds.filter(a => a?.ad_config?.lang === lang)
+  }
+  if (filteredAds.length === 0) {
+    filteredAds = safeAds
+  }
+
+  const pinnedAd = filteredAds.find(a => a?.ad_config?.is_fixed || a?.ad_config?.is_exclusive)
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const isSlider = !pinnedAd && filteredAds.length > 1
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const startTimer = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current)
+    intervalRef.current = setInterval(() => {
+      setCurrentIndex(prev => (prev + 1) % filteredAds.length)
+    }, 5000)
+  }, [filteredAds.length])
+
+  useEffect(() => {
+    if (!isSlider) return
+    startTimer()
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isSlider, startTimer]);
+      if (intervalRef.current) clearInterval(intervalRef.current)
+    }
+  }, [isSlider, startTimer])
 
   const navigateTo = useCallback((index: number) => {
-    setCurrentIndex(index);
-    if (isSlider) startTimer();
-  }, [isSlider, startTimer]);
+    setCurrentIndex(index)
+    if (isSlider) startTimer()
+  }, [isSlider, startTimer])
 
   const goNext = useCallback(() => {
-    setCurrentIndex(prev => {
-      const next = (prev + 1) % filteredAds.length;
-      return next;
-    });
-    if (isSlider) startTimer();
-  }, [isSlider, filteredAds.length, startTimer]);
+    setCurrentIndex(prev => (prev + 1) % filteredAds.length)
+    if (isSlider) startTimer()
+  }, [isSlider, filteredAds.length, startTimer])
 
   const goPrev = useCallback(() => {
-    setCurrentIndex(prev => {
-      const next = (prev - 1 + filteredAds.length) % filteredAds.length;
-      return next;
-    });
-    if (isSlider) startTimer();
-  }, [isSlider, filteredAds.length, startTimer]);
+    setCurrentIndex(prev => (prev - 1 + filteredAds.length) % filteredAds.length)
+    if (isSlider) startTimer()
+  }, [isSlider, filteredAds.length, startTimer])
 
-  const ad = pinnedAd || filteredAds[currentIndex];
-  const cfg = ad?.ad_config;
-  const mediaUrl = ad?.media_url;
-  const hasMedia = Boolean(mediaUrl);
+  if (isPremiumUser) return null
+  if (!killSwitchLoaded) return null
+  if (killSwitchActive) return null
+
+  if (filteredAds.length === 0) return null
+
+  const ad = pinnedAd || filteredAds[currentIndex]
+  const cfg = ad?.ad_config
+  const mediaUrl = ad?.media_url
+  const hasMedia = Boolean(mediaUrl)
 
   return (
     <div className="w-full max-w-6xl mx-auto px-4 my-8" id={`ad-holder-${placement}`}>
@@ -191,10 +219,10 @@ export const Ad_Renderer_Component = ({ placement, lang, ads }: { placement: 'to
             <button
               onClick={() => {
                 if (cfg.targetUrl.startsWith('http')) {
-                  window.open(cfg.targetUrl, '_blank');
+                  window.open(cfg.targetUrl, '_blank')
                 } else {
-                  const el = document.querySelector(cfg.targetUrl);
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  const el = document.querySelector(cfg.targetUrl)
+                  if (el) el.scrollIntoView({ behavior: 'smooth' })
                 }
               }}
               className="glass-button text-xs font-semibold py-2.5 px-5 rounded-xl border border-white/10 shadow-sm whitespace-nowrap cursor-pointer hover:bg-slate-500/10"
@@ -222,5 +250,5 @@ export const Ad_Renderer_Component = ({ placement, lang, ads }: { placement: 'to
         </motion.div>
       </AnimatePresence>
     </div>
-  );
-};
+  )
+}
