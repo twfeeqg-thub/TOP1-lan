@@ -19,14 +19,46 @@ interface AuthContextType {
   refreshToken: () => Promise<boolean>;
 }
 
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`))
+  return match ? decodeURIComponent(match[2]) : null
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    const payload = token.split('.')[1]
+    return JSON.parse(atob(payload))
+  } catch {
+    return null
+  }
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function initFromCookie(): { token: string | null; user: User | null } {
+  if (typeof window === 'undefined') return { token: null, user: null }
+  const token = getCookie('aisahl_access_token')
+  if (!token) return { token: null, user: null }
+  const payload = decodeJwtPayload(token)
+  if (!payload) return { token: null, user: null }
+  return {
+    token,
+    user: {
+      id: payload.userId as string,
+      phone: payload.phone as string,
+      role: payload.role as User['role'],
+    },
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [initState] = useState(initFromCookie)
+  const [user, setUser] = useState<User | null>(initState.user);
+  const [accessToken, setAccessToken] = useState<string | null>(initState.token);
   const [isLoading] = useState(false);
 
   const login = useCallback((token: string, userData: User) => {
+    document.cookie = `aisahl_access_token=${token}; path=/; max-age=900; samesite=strict; ${window.location.protocol === 'https:' ? 'secure;' : ''}`
     setAccessToken(token);
     setUser(userData);
   }, []);
@@ -35,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
+    document.cookie = 'aisahl_access_token=; path=/; max-age=0'
     setAccessToken(null);
     setUser(null);
   }, []);
@@ -48,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
       const data = await res.json();
+      document.cookie = `aisahl_access_token=${data.access_token}; path=/; max-age=900; samesite=strict; ${window.location.protocol === 'https:' ? 'secure;' : ''}`
       setAccessToken(data.access_token);
       return true;
     } catch {

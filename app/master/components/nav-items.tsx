@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, FolderKanban, Megaphone, Zap, Users, Settings } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Megaphone, Zap, Grid3x3, Users, Settings } from 'lucide-react'
 
 export interface NavItem {
   id: string
@@ -17,6 +17,7 @@ export const navItems: NavItem[] = [
   { id: 'projects', labelAr: 'المشاريع', labelEn: 'Projects', href: '/master/projects', icon: FolderKanban },
   { id: 'ads', labelAr: 'الإعلانات', labelEn: 'Ads', href: '/master/ads', icon: Megaphone },
   { id: 'features', labelAr: 'الميزات', labelEn: 'Features', href: '/master/features', icon: Zap },
+  { id: 'sectors', labelAr: 'القطاعات', labelEn: 'Sectors', href: '/master/sectors', icon: Grid3x3 },
   { id: 'users', labelAr: 'المستخدمون', labelEn: 'Users', href: '/master/users', icon: Users },
   { id: 'settings', labelAr: 'الإعدادات', labelEn: 'Settings', href: '/master/settings', icon: Settings },
 ]

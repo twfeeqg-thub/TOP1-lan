@@ -73,6 +73,14 @@ export async function POST(request: NextRequest) {
 
     response.cookies.set(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS);
 
+    response.cookies.set('aisahl_access_token', accessToken, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 900,
+    });
+
     return response;
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
