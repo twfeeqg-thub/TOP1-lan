@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
 import dynamic from 'next/dynamic'
 import { getSectorData } from '@/lib/get-sector-data'
-import { DynamicHero, DynamicProjects, DynamicAbout, DynamicPartners, DynamicLegalFooter } from '@/components/sector'
+import { DynamicHero, DynamicProjects, DynamicAbout, DynamicPartners, DynamicLegalFooter, FallbackBanner } from '@/components/sector'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -12,7 +12,7 @@ const Ad_Renderer_Component = dynamic(() => import('@/components/ad-renderer').t
 
 export default async function SectorPage({ params }: { params: Promise<{ sector_slug: string }> }) {
   const { sector_slug } = await params
-  const data = await getSectorData(sector_slug)
+  const { data, isFallback } = await getSectorData(sector_slug)
 
   if (!data) notFound()
 
@@ -35,6 +35,8 @@ export default async function SectorPage({ params }: { params: Promise<{ sector_
       </nav>
 
       <div className="h-16" />
+
+      {isFallback && <FallbackBanner />}
 
       <DynamicHero hero={data.hero} />
 

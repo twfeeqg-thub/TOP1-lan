@@ -14,7 +14,7 @@ import {
   X,
   CheckCircle2,
   ShieldCheck,
-  ExternalLink,
+  ArrowLeft,
   ArrowLeftRight,
   Sparkles,
   Layers,
@@ -153,7 +153,7 @@ const SECTOR_META: {
     descriptionAr: 'حلول ذكية لتمكين الكادر التعليمي والطلاب من خلال فضاءات تعليمية سحابية متكاملة وسهلة الاستخدام.',
     descriptionEn: 'Smart solutions empowering educators and students through integrated, easy-to-use cloud environments.',
     iconName: 'GraduationCap',
-    linkUrl: 'https://ai-sahl-vip-land-v1.vercel.app/#projects',
+    linkUrl: '/education',
   },
   {
     id: 'health',
@@ -247,7 +247,7 @@ export default function LandingPage() {
   // Handle Sector Actions
   const handleSectorClick = (sector: any) => {
     if (sector.isActive && sector.linkUrl) {
-      window.open(sector.linkUrl, '_blank', 'noopener,noreferrer');
+      window.location.href = sector.linkUrl;
     } else {
       setSelectedSector(sector);
       setSuggestion('');
@@ -499,8 +499,8 @@ export default function LandingPage() {
                       id={`sector-trigger-${sector.id}`}
                       className="glass-button w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 hover:bg-blue-600 hover:text-white text-slate-800 dark:text-slate-200 border-white/10 hover:border-blue-600 hover:scale-[1.02] cursor-pointer"
                     >
-                      <span>{lang === 'ar' ? 'دخول القطاع التعليمي المفعّل' : 'Enter Active Education Sector'}</span>
-                      <ExternalLink className="w-4 h-4" />
+                      <span>{lang === 'ar' ? 'دخول القطاع التعليمي' : 'Enter Education Sector'}</span>
+                      <ArrowLeft className="w-4 h-4" />
                     </button>
                   ) : (
                     <button
