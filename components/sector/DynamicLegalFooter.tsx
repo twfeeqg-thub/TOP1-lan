@@ -1,11 +1,22 @@
+'use client'
+
+import { motion } from 'motion/react'
 import Link from 'next/link'
 import type { LegalFooter } from '@/lib/sector-types'
+import { usePsychMessage } from '@/hooks/use-psych-message'
+import { farewellMessages } from '@/lib/psych-support'
 
 export default function DynamicLegalFooter({ legal_footer }: { legal_footer: LegalFooter }) {
   if (!legal_footer) return null
 
+  const farewellMsg = usePsychMessage(farewellMessages)
+
   return (
-    <footer
+    <motion.footer
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
       className="max-w-6xl mx-auto px-6 py-12"
       style={{ borderTop: '1px solid var(--card-border)' }}
     >
@@ -58,7 +69,14 @@ export default function DynamicLegalFooter({ legal_footer }: { legal_footer: Leg
             ))}
           </div>
         )}
+
+        <p
+          className="text-xs font-medium text-center pt-2"
+          style={{ color: 'var(--primary)' }}
+        >
+          {farewellMsg}
+        </p>
       </div>
-    </footer>
+    </motion.footer>
   )
 }

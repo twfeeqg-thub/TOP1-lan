@@ -150,6 +150,76 @@ body {
 }
 
 /* Keyframe animations */
+/* Glow card — premium glassmorphism with hidden glow on hover */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-card::after {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  background: radial-gradient(ellipse at center, var(--glow-color) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.glow-card:hover::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.glow-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Icon frame — glass gradient square for icons */
+.icon-frame {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1.25rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 32px var(--glass-shadow);
+  flex-shrink: 0;
+}
+
+.icon-frame-student {
+  background: linear-gradient(135deg, #f97316, #ec4899, transparent);
+  animation: float 4s ease-in-out infinite;
+}
+
+.icon-frame-professional {
+  background: linear-gradient(135deg, var(--primary-light), transparent);
+  transition: box-shadow 0.3s ease;
+}
+
+.icon-frame-professional:hover {
+  box-shadow: 0 0 24px var(--glow-color);
+}
+
+/* Logo glow orb */
+.glow-orb {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.5;
+  background: var(--primary);
+  animation: pulse-slow 6s ease-in-out infinite;
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }
@@ -160,8 +230,8 @@ body {
 }
 
 @keyframes pulse-slow {
-  0%, 100% { opacity: 0.2; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(1.05); }
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.08); }
 }
 
 .animate-pulse-slow {

@@ -23,6 +23,7 @@ export const sectorFullData: Record<string, SectorData> = {
         name: 'محرك الاختبارات',
         description: 'إنشاء، تصحيح، وتحليل الاختبارات المدرسية بشكل آلي ذكي ومريح.',
         icon: 'FileText',
+        audience: 'student',
         features: [
           'إنشاء اختبارات احترافية في دقائق',
           'تصحيح آلي فوري لجميع أنواع الأسئلة',
@@ -37,6 +38,7 @@ export const sectorFullData: Record<string, SectorData> = {
         name: 'توأم المعلم',
         description: 'مساعدك الرقمي الذكي لتحضير الدروس، صياغة الأنشطة المبتكرة، وتوفير إجابات فورية نموذجية لطلابك.',
         icon: 'Bot',
+        audience: 'professional',
         features: [
           'تحضير دروس ذكي بالذكاء الاصطناعي',
           'صياغة أنشطة مبتكرة وتفاعلية',
@@ -51,6 +53,7 @@ export const sectorFullData: Record<string, SectorData> = {
         name: 'إدارة المدارس',
         description: 'منظومة شاملة تربط الإدارة بالمعلمين والطلاب وأولياء الأمور لتجربة تعليمية متكاملة.',
         icon: 'School',
+        audience: 'professional',
         features: [
           'ربط الإدارة بالمعلمين والطلاب',
           'إدارة الجداول الدراسية والحصص',
@@ -65,6 +68,7 @@ export const sectorFullData: Record<string, SectorData> = {
         name: 'إدارة المعاهد',
         description: 'تنظيم الجداول، الحضور والغياب، المدفوعات والشهادات لمعاهد التدريب والمراكز التعليمية بكل سلاسة ووضوح.',
         icon: 'Building',
+        audience: 'professional',
         features: [
           'تنظيم الجداول والمواعيد بسلاسة',
           'نظام حضور وغياب متكامل',
@@ -79,6 +83,7 @@ export const sectorFullData: Record<string, SectorData> = {
         name: 'حلقات تحفيظ القرآن الكريم',
         description: 'متابعة وتتبع الحفظ والتجويد والمراجعة لطلاب الحلقات، مع تقارير أداء دورية تبهج قلوب أولياء الأمور.',
         icon: 'BookOpen',
+        audience: 'student',
         features: [
           'متابعة الحفظ والتجويد والمراجعة',
           'تقارير أداء دورية لأولياء الأمور',

@@ -1,8 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react'
 import type { Testimonial } from '@/lib/sector-types'
+import { usePsychMessage } from '@/hooks/use-psych-message'
+import { appreciationMessages } from '@/lib/psych-support'
 
 export default function DynamicTestimonials({ testimonials }: { testimonials: Testimonial[] }) {
   const [activeIndex, setActiveIndex] = useState(0)
@@ -10,59 +13,77 @@ export default function DynamicTestimonials({ testimonials }: { testimonials: Te
   if (!testimonials || testimonials.length === 0) return null
 
   const current = testimonials[activeIndex]
+  const appreciationMsg = usePsychMessage(appreciationMessages)
 
   const goNext = () => setActiveIndex((prev) => (prev + 1) % testimonials.length)
   const goPrev = () => setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">
-      <div className="glass-card rounded-2xl p-8 md:p-12 relative">
+      <div className="glass-card rounded-2xl p-8 md:p-12 relative overflow-hidden">
         <Quote
           className="absolute top-4 right-4 w-10 h-10 opacity-20"
           style={{ color: 'var(--primary)' }}
         />
 
-        <p
-          className="text-base md:text-lg leading-relaxed text-center max-w-3xl mx-auto mb-8 min-h-[80px]"
-          style={{ color: 'var(--text-main)' }}
-        >
-          {current.content}
-        </p>
-
-        <div className="flex items-center justify-center gap-4 mb-6">
-          <button
-            onClick={goPrev}
-            className="p-2 rounded-full transition-all hover:scale-110 cursor-pointer"
-            style={{ backgroundColor: 'var(--glow-color)', color: 'var(--primary)' }}
-            aria-label="السابق"
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeIndex}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ type: 'spring', stiffness: 180, damping: 18 }}
           >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-
-          <div className="text-center">
-            <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
-              {current.name}
+            <p
+              className="text-base md:text-lg leading-relaxed text-center max-w-3xl mx-auto mb-8 min-h-[80px]"
+              style={{ color: 'var(--text-main)' }}
+            >
+              {current.content}
             </p>
-            {current.role && (
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                {current.role}
-              </p>
-            )}
-          </div>
 
-          <button
-            onClick={goNext}
-            className="p-2 rounded-full transition-all hover:scale-110 cursor-pointer"
-            style={{ backgroundColor: 'var(--glow-color)', color: 'var(--primary)' }}
-            aria-label="التالي"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-        </div>
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <button
+                onClick={goPrev}
+                className="p-2 rounded-full transition-all hover:scale-110 cursor-pointer"
+                style={{ backgroundColor: 'var(--glow-color)', color: 'var(--primary)' }}
+                aria-label="السابق"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+
+              <div className="text-center">
+                <p className="text-sm font-bold" style={{ color: 'var(--text-main)' }}>
+                  {current.name}
+                </p>
+                {current.role && (
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                    {current.role}
+                  </p>
+                )}
+              </div>
+
+              <button
+                onClick={goNext}
+                className="p-2 rounded-full transition-all hover:scale-110 cursor-pointer"
+                style={{ backgroundColor: 'var(--glow-color)', color: 'var(--primary)' }}
+                aria-label="التالي"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        <p
+          className="text-xs font-medium text-center mb-4"
+          style={{ color: 'var(--primary)' }}
+        >
+          {appreciationMsg}
+        </p>
 
         <div className="flex items-center justify-center gap-2">
           {testimonials.map((_, idx) => (
-            <button
+            <motion.button
               key={idx}
               onClick={() => setActiveIndex(idx)}
               className="rounded-full transition-all cursor-pointer"
@@ -71,6 +92,8 @@ export default function DynamicTestimonials({ testimonials }: { testimonials: Te
                 height: '8px',
                 backgroundColor: idx === activeIndex ? 'var(--primary)' : 'var(--card-border)',
               }}
+              animate={idx === activeIndex ? { width: 24 } : { width: 8 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               aria-label={`الانتقال إلى الشهادة ${idx + 1}`}
             />
           ))}

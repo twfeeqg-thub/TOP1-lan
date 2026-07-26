@@ -20,6 +20,7 @@ export interface Project {
   features: string[]
   register_link: string
   login_link: string
+  audience?: 'student' | 'professional'
 }
 
 export interface Highlight {
