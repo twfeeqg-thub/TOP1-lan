@@ -1,0 +1,10 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "lovable": {
+      "type": "remote",
+      "url": "https://mcp.lovable.dev",
+      "enabled": true
+    }
+  }
+}

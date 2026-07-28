@@ -24,6 +24,7 @@ export const sectorFullData: Record<string, SectorData> = {
         description: 'إنشاء، تصحيح، وتحليل الاختبارات المدرسية بشكل آلي ذكي ومريح.',
         icon: 'FileText',
         audience: 'student',
+        slug: 'exam-engine',
         features: [
           'إنشاء اختبارات احترافية في دقائق',
           'تصحيح آلي فوري لجميع أنواع الأسئلة',

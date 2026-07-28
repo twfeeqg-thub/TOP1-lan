@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 export const welcomeMessages = [
   'نحن هنا لنجعل رحلتك التعليمية أسهل وأكثر متعة',
   'مرحباً بك في منصة سهّل التعليمية — مستقبل التعلم بين يديك',
@@ -44,6 +46,48 @@ export const successMessages = [
   'عمل ممتاز! أنت في الطريق الصحيح',
 ]
 
+export const examCorrectMessages = [
+  'إجابة ممتازة! 🌟 ذكاء حاد!',
+  'أحسنتِ! أنتِ في الطريق الصحيح',
+  'ممتاز! ثقتك بنفسك هي سر نجاحك',
+  'رائعة! كل إجابة صحيحة تقربك من القمة',
+]
+
+export const examWrongMessages = [
+  'لا بأس، هذا درس جديد لكِ — التعلم من الخطأ هو النجاح الحقيقي',
+  'أنتِ تتعلمين وتتقدمين، كل خطأ يصقل مهاراتك',
+  'انظري للشرح المبسط وحاولي مرة أخرى — أنتِ قادرة',
+  'الأخطاء هي جسر النجاح، خذي نفساً عميقاً وجربي السؤال البديل',
+]
+
+export const examLoadingMessages = [
+  'جهّزي عقلك... النجاح يبدأ بخطوة',
+  'أنتِ على وشك التألق! ثقي بنفسك',
+  'العقل المستعد هو مفتاح التفوق — أنتِ مستعدة',
+  'خذي نفساً عميقاً، نحن نعدك بتجربة رائعة',
+]
+
+export const examResultMessages = [
+  'أداء رائع! فخورون بكِ جداً',
+  'أنتِ نجمة اليوم! تألقتِ بامتياز',
+  'نتيجة مبهرة! عملك الجاد يؤتي ثماره',
+  'مبدعة! استمري في التألق والتميز',
+]
+
+export const examHoverMessages = [
+  'ألمسي الزر بثقة — أنتِ قادرة',
+  'أنتِ على بعد خطوة من الإجابة الصحيحة',
+  'ثقي بنفسك، أنتِ تعرفين الإجابة',
+  'هيا بنا — كل سؤال فرصة جديدة للإبداع',
+]
+
+export const examEmptyMessages = [
+  'هذه المساحة تنتظر إبداعك — املئيها بتألقك',
+  'كل شيء يبدأ من هنا — أنتِ على أعتاب التميز',
+  'استعدي— الاختبارات القادمة تحمل لكِ الكثير من النجاح',
+]
+
+
 export const appreciationMessages = [
   'شريك نجاحك هو مصدر فخرنا',
   'ثقتك بنا هي الوقود الذي يدفعنا للأمام',
@@ -72,6 +116,32 @@ export const faqOpenMessages = [
   'سؤال ممتاز! الإجابة قد تثير اهتمامك',
 ]
 
+
 export function getRandomMessage(messages: string[]): string {
   return messages[Math.floor(Math.random() * messages.length)]
+}
+
+export function usePsychMessage(theme?: string) {
+  return useMemo(() => {
+    const isPink = theme === 'pink'
+
+    const correct = isPink
+      ? ['إجابة رائعة! أنتِ مبدعة حقيقية 🌸', 'أحسنتِ يا ذكية! فخورة بك', 'ممتازة! أنتِ نجمة ساطعة ✨']
+      : examCorrectMessages
+
+    const wrong = isPink
+      ? ['لا بأس حبيبتي، كل خطأ يصقل موهبتك 🌷', 'أنتِ قوية، التعلم من الأخطاء يجعلك أذكى', 'خدي راحتك، ثم حاولي مجدداً — أنتِ قادرة']
+      : examWrongMessages
+
+    return {
+      getWelcome: () => getRandomMessage(welcomeMessages),
+      getEncouragement: () => getRandomMessage(encouragementMessages),
+      getLoading: () => getRandomMessage(examLoadingMessages),
+      getCorrect: () => getRandomMessage(correct),
+      getWrong: () => getRandomMessage(wrong),
+      getHover: () => getRandomMessage(examHoverMessages),
+      getEmpty: () => getRandomMessage(examEmptyMessages),
+      getResult: () => getRandomMessage(examResultMessages),
+    }
+  }, [theme])
 }

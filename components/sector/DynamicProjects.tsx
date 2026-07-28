@@ -9,6 +9,45 @@ import { encouragementMessages } from '@/lib/psych-support'
 import IconFrame from './IconFrame'
 import SmartTooltip from './SmartTooltip'
 
+function getExamEngineButton(project: Project) {
+  if (project.slug !== 'exam-engine') return null
+
+  const isDevMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
+
+  if (isDevMode) {
+    return (
+      <SmartTooltip message="معاينة المشروع">
+        <Link
+          href="/exam-engine/maker"
+          className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
+          style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+        >
+          معاينة المشروع
+          <ExternalLink className="w-3.5 h-3.5" />
+        </Link>
+      </SmartTooltip>
+    )
+  }
+
+  return (
+    <SmartTooltip>
+      <Link
+        href={project.login_link}
+        className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
+        style={{
+          color: 'var(--text-main)',
+          backgroundColor: 'var(--card-bg)',
+          border: '1px solid var(--card-border)',
+          backdropFilter: 'blur(var(--glass-blur))',
+        }}
+      >
+        تسجيل الدخول
+        <ExternalLink className="w-3.5 h-3.5" />
+      </Link>
+    </SmartTooltip>
+  )
+}
+
 const iconMap: Record<string, React.ReactNode> = {
   FileText: <FileText className="w-8 h-8" />,
   Bot: <Bot className="w-8 h-8" />,
@@ -113,35 +152,43 @@ export default function DynamicProjects({ projects }: { projects: Project[] }) {
               <div className="mt-auto" />
 
               <div className="flex flex-wrap gap-3">
-                {project.register_link && (
-                  <SmartTooltip>
-                    <Link
-                      href={project.register_link}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
-                      style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
-                    >
-                      طلب الخدمة
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Link>
-                  </SmartTooltip>
-                )}
-                {project.login_link && (
-                  <SmartTooltip>
-                    <Link
-                      href={project.login_link}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
-                      style={{
-                        color: 'var(--text-main)',
-                        backgroundColor: 'var(--card-bg)',
-                        border: '1px solid var(--card-border)',
-                        backdropFilter: 'blur(var(--glass-blur))',
-                      }}
-                    >
-                      تسجيل الدخول
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </Link>
-                  </SmartTooltip>
-                )}
+                {(() => {
+                  const examBtn = getExamEngineButton(project)
+                  if (examBtn) return examBtn
+                  return (
+                    <>
+                      {project.register_link && (
+                        <SmartTooltip>
+                          <Link
+                            href={project.register_link}
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
+                            style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
+                          >
+                            طلب الخدمة
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        </SmartTooltip>
+                      )}
+                      {project.login_link && (
+                        <SmartTooltip>
+                          <Link
+                            href={project.login_link}
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
+                            style={{
+                              color: 'var(--text-main)',
+                              backgroundColor: 'var(--card-bg)',
+                              border: '1px solid var(--card-border)',
+                              backdropFilter: 'blur(var(--glass-blur))',
+                            }}
+                          >
+                            تسجيل الدخول
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+                        </SmartTooltip>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
             </motion.div>
           )

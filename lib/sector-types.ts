@@ -21,6 +21,7 @@ export interface Project {
   register_link: string
   login_link: string
   audience?: 'student' | 'professional'
+  slug?: string
 }
 
 export interface Highlight {
