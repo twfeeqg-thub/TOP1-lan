@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   GraduationCap,
   HeartPulse,
@@ -20,13 +21,24 @@ import {
   Layers,
   MessageSquare,
   Building,
-  Briefcase
+  Briefcase,
+  UserCog,
+  LogOut,
+  Rocket,
+  PenLine,
+  Grid3x3,
+  Lock,
 } from 'lucide-react';
 import { useApp } from './providers';
 import { useProjects, useAds } from '@/hooks/use-projects';
-import { clearCache } from '@/lib/db';
 import { Ad_Renderer_Component, type Ad } from '@/components/ad-renderer';
 import { ClientAdRequestModal } from '@/components/ads/client-ad-request-modal';
+import { useAuth } from '@/context/AuthContext';
+import { EditProfileModal } from '@/components/auth/EditProfileModal';
+import {
+  APP_SLUG_TO_PROJECT_SLUG,
+  APP_SLUG_ROUTES,
+} from '@/lib/subscriptions';
 
 // ==========================================
 // 1. UI TEXT CONFIGURATION (PRESENTATION ONLY - NO MOCK DATA)
@@ -210,6 +222,8 @@ function mapProjectToSectorId(project: { sector_name?: string; project_slug?: st
 
 export default function LandingPage() {
   const { theme, lang, toggleTheme, toggleLang } = useApp();
+  const { user, isAuthenticated, subscriptions, logout } = useAuth();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const { data: projects = [] } = useProjects();
   const { data: adsRaw } = useAds();
@@ -226,6 +240,19 @@ export default function LandingPage() {
   // Legal Popups Modal State
   const [activeLegalModal, setActiveLegalModal] = useState<{title: string, content: string} | null>(null);
   const [adRequestModal, setAdRequestModal] = useState(false);
+
+  const subscribedProjects = subscriptions.map((slug) => {
+    const projectSlug = APP_SLUG_TO_PROJECT_SLUG[slug];
+    const project = projects.find((p: Record<string, unknown>) => (p as any).project_slug === projectSlug);
+    const config = (project as any)?.modules_config ?? {};
+    return {
+      slug,
+      route: APP_SLUG_ROUTES[slug] ?? null,
+      title: config.title_ar || slug,
+      description: config.description_ar || '',
+      icon: config.icon || 'Layers',
+    };
+  });
 
   // Derive sectors from SECTOR_META + Supabase project data
   const sectors = SECTOR_META.map(meta => {
@@ -364,6 +391,35 @@ export default function LandingPage() {
                 <Palette className="w-4 h-4" />
               </button>
             </div>
+
+            {isAuthenticated && user && (
+              <div className="flex items-center gap-1.5 glass-card rounded-xl px-2 py-1.5">
+                <div className="w-7 h-7 rounded-full bg-[var(--primary-light)] flex items-center justify-center">
+                  <span className="text-[var(--primary)] text-xs font-bold">
+                    {(user.name || 'U')[0]}
+                  </span>
+                </div>
+                <span className="hidden md:inline text-xs font-semibold text-[var(--text-main)] max-w-[120px] truncate">
+                  {user.name || user.phone}
+                </span>
+                <button
+                  id="profile-settings-btn"
+                  onClick={() => setProfileOpen(true)}
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+                  title={lang === 'ar' ? 'تعديل بيانات الحساب' : 'Edit account settings'}
+                >
+                  <UserCog className="w-4 h-4" />
+                </button>
+                <button
+                  id="logout-btn"
+                  onClick={() => logout()}
+                  className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+                  title={lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
@@ -442,6 +498,99 @@ export default function LandingPage() {
           أضغط هنا لإضافة إعلانك الخاص
         </button>
       </div>
+
+      {/* ==========================================
+          AUTH-AWARE PANELS - ROLE DRIVEN FROM SESSION
+         ========================================== */}
+      {isAuthenticated && user?.role === 'super_admin' && (
+        <section className="px-4 py-14 relative" id="super-admin-panels">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div className="text-center space-y-3 max-w-3xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card text-xs font-bold" style={{ color: 'var(--primary)' }}>
+                <Rocket className="w-4 h-4" />
+                <span>لوحات القيادة السيادية</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
+                دخول مباشر بدون إعادة مصادقة
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { href: '/exam-engine/maker', label: 'محرك الاختبارات — المعلّم', icon: PenLine },
+                { href: '/exam-engine/taker', label: 'محرك الاختبارات — الطالب', icon: GraduationCap },
+                { href: '/master/sectors', label: 'لوحة القطاعات', icon: Grid3x3 },
+                { href: '/master', label: 'لوحة القيادة العامة', icon: Layers },
+              ].map((panel) => {
+                const PanelIcon = panel.icon
+                return (
+                  <Link
+                    key={panel.href}
+                    href={panel.href}
+                    className="glass-card glow-card rounded-3xl p-6 flex flex-col items-center gap-4 text-center group"
+                    id={`jump-${panel.href.replace(/[^a-zA-Z0-9]/g, '-')}`}
+                  >
+                    <div className="w-14 h-14 rounded-2xl bg-[var(--primary-light)] flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <PanelIcon className="w-7 h-7" style={{ color: 'var(--primary)' }} />
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{panel.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {isAuthenticated && user && user.role !== 'super_admin' && (
+        <section className="px-4 py-14 relative" id="subscribed-projects">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <div className="text-center space-y-3 max-w-3xl mx-auto">
+              <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
+                {lang === 'ar' ? 'مشاريعك المشترك فيها' : 'Your Subscribed Projects'}
+              </h3>
+            </div>
+
+            {subscribedProjects.length === 0 ? (
+              <div className="glass-card rounded-3xl p-8 text-center max-w-xl mx-auto">
+                <Lock className="w-8 h-8 mx-auto mb-3" style={{ color: 'var(--text-muted)' }} />
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {lang === 'ar'
+                    ? 'لا توجد اشتراكات نشطة لديك بعد. تواصل معنا لتفعيل خدماتك.'
+                    : 'You have no active subscriptions yet. Contact us to activate your services.'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {subscribedProjects.map((p) => (
+                  <div key={p.slug} className="glass-card rounded-3xl p-6 flex flex-col justify-between gap-4 glow-card">
+                    <div className="space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-[var(--primary-light)] flex items-center justify-center">
+                        <Layers className="w-6 h-6" style={{ color: 'var(--primary)' }} />
+                      </div>
+                      <h4 className="text-base font-bold text-slate-900 dark:text-white">{p.title}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{p.description}</p>
+                    </div>
+                    {p.route ? (
+                      <Link
+                        href={p.route}
+                        className="w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 bg-[var(--primary)] text-white hover:brightness-110 transition-all"
+                      >
+                        <span>{lang === 'ar' ? 'دخول الخدمة' : 'Open Service'}</span>
+                        <ArrowLeft className="w-4 h-4" />
+                      </Link>
+                    ) : (
+                      <span className="w-full py-3 px-4 rounded-xl font-bold text-xs text-center bg-slate-500/10 text-slate-500 border border-white/5">
+                        {lang === 'ar' ? 'قيد التشغيل' : 'Coming Soon'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ==========================================
           SECTORS SECTION - DYNAMIC FROM SUPABASE
@@ -608,6 +757,13 @@ export default function LandingPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">
               {currentCopy.legal.copyright}
             </p>
+            <Link
+              href="/master/login"
+              className="inline-block text-[11px] text-slate-500/60 hover:text-slate-400 dark:text-slate-600 dark:hover:text-slate-400 font-medium opacity-60 hover:opacity-100 transition-opacity"
+              aria-label="دخول الإدارة"
+            >
+              دخول الإدارة
+            </Link>
           </div>
 
         </div>
@@ -786,20 +942,7 @@ export default function LandingPage() {
 
       <ClientAdRequestModal open={adRequestModal} onClose={() => setAdRequestModal(false)} />
 
-      {/* 🛠 DEV TOOL: CACHE DESTROYER - إزالة قبل الإنتاج */}
-      <div className="fixed bottom-4 left-4 z-[999] opacity-30 hover:opacity-100 transition-opacity">
-        <button
-          onClick={async () => {
-            await clearCache();
-            localStorage.clear();
-            window.location.reload();
-          }}
-          className="text-[10px] bg-red-600/80 text-white px-2.5 py-1 rounded font-mono"
-          title="مسح الكاش المحلي و localStorage وإعادة التحميل"
-        >
-          🧨 تدمير الكاش
-        </button>
-      </div>
+      <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
 
     </div>
   );

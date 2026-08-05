@@ -28,7 +28,3 @@ export async function getCachedData<T>(key: string): Promise<T | null> {
   const entry = await db.projects.where('key').equals(key).first();
   return (entry?.data as T) ?? null;
 }
-
-export async function clearCache(): Promise<void> {
-  await db.projects.clear();
-}

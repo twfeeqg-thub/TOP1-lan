@@ -11,6 +11,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // The login page itself must be reachable without a token, otherwise
+  // unauthenticated visitors get stuck in a redirect loop.
+  if (request.nextUrl.pathname === '/master/login') {
+    return NextResponse.next()
+  }
+
   const token = extractToken(request)
   if (!token) {
     return redirectToLogin(request)

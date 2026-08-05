@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "seed": "tsx scripts/seed.ts",
+    "seed:owner": "tsx scripts/seed-owner.ts",
     "clean": "next clean"
   },
   "dependencies": {

@@ -6,15 +6,22 @@ import { useNavItems } from '../../components/nav-items'
 import { SidebarLogo } from '../../components/sidebar-logo'
 import { useAuth } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
+import { Rocket, PenLine, GraduationCap, Grid3x3 } from 'lucide-react'
 
 interface SidebarV2Props {
   collapsed: boolean
   onToggle: () => void
 }
 
+const SUPER_ADMIN_JUMPS = [
+  { href: '/exam-engine/maker', label: 'محرك الاختبارات', icon: PenLine },
+  { href: '/exam-engine/taker', label: 'منصة الطالب', icon: GraduationCap },
+  { href: '/master/sectors', label: 'لوحة القطاعات', icon: Grid3x3 },
+]
+
 export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
-  const { navItems, isActive } = useNavItems()
   const { user } = useAuth()
+  const { navItems, isActive } = useNavItems(user?.role)
 
   return (
     <motion.aside
@@ -40,6 +47,39 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
           )}
         </button>
       </div>
+
+      {user?.role === 'super_admin' && (
+        <div className="px-3 py-2">
+          <div className={cn('rounded-2xl p-3 glass-card', collapsed && 'px-1')}>
+            {!collapsed && (
+              <p className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--sidebar-text-muted)] mb-2 px-1">
+                <Rocket className="w-3.5 h-3.5 text-[var(--primary)]" />
+                قفزات مباشرة
+              </p>
+            )}
+            <div className="space-y-1">
+              {SUPER_ADMIN_JUMPS.map((jump) => {
+                const Icon = jump.icon
+                return (
+                  <Link
+                    key={jump.href}
+                    href={jump.href}
+                    className={cn(
+                      'flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all',
+                      'text-[var(--sidebar-text)] hover:bg-[var(--primary-light)] hover:border-[var(--primary)] border border-transparent',
+                      collapsed && 'justify-center px-0'
+                    )}
+                    title={collapsed ? jump.label : undefined}
+                  >
+                    <Icon className="w-4 h-4 shrink-0 text-[var(--primary)]" />
+                    {!collapsed && <span>{jump.label}</span>}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto overflow-x-hidden">
         {navItems.map((item) => {

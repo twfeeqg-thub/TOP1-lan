@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { poolAdmin } from '@/lib/supabase-pool';
 import { normalizePhone } from '@/lib/phone';
-import { comparePassword, signAccessToken, generateRefreshToken, REFRESH_COOKIE_NAME, REFRESH_COOKIE_OPTIONS } from '@/lib/auth';
+import {
+  comparePassword,
+  signAccessToken,
+  generateRefreshToken,
+  REFRESH_COOKIE_NAME,
+  REFRESH_COOKIE_OPTIONS,
+  ACCESS_COOKIE_NAME,
+  ACCESS_COOKIE_OPTIONS,
+  type AuthRole,
+} from '@/lib/auth';
 import { loginSchema } from '@/lib/validators';
+import { ensureSuperAdminSubscriptions, fetchUserSubscriptions } from '@/lib/subscriptions-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +56,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (user.role === 'super_admin') {
+      await ensureSuperAdminSubscriptions(user.id);
+    }
+
+    const subscriptions = await fetchUserSubscriptions(user.id);
+
     const refreshToken = generateRefreshToken();
     const expiresAt = new Date(Date.now() + REFRESH_COOKIE_OPTIONS.maxAge * 1000).toISOString();
 
@@ -60,7 +76,7 @@ export async function POST(request: NextRequest) {
         expires_at: expiresAt,
       });
 
-    const accessToken = signAccessToken({ userId: user.id, phone: normalizedPhone, role: user.role });
+    const accessToken = signAccessToken({ userId: user.id, phone: normalizedPhone, role: user.role as AuthRole });
 
     const isSuperAdmin = user.role === 'super_admin';
     const redirectTo = isSuperAdmin ? '/master' : undefined;
@@ -68,18 +84,12 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       access_token: accessToken,
       user: { id: user.id, phone: user.phone, name: user.name, role: user.role },
+      subscriptions,
       redirect_to: redirectTo,
     });
 
     response.cookies.set(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS);
-
-    response.cookies.set('aisahl_access_token', accessToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge: 900,
-    });
+    response.cookies.set(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS);
 
     return response;
   } catch {

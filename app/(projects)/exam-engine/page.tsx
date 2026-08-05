@@ -2,18 +2,38 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import { useAuth } from '@/context/AuthContext'
 
 export default function ExamEnginePage() {
   const router = useRouter()
+  const { user, isAuthenticated, isLoading, subscriptions } = useAuth()
 
   useEffect(() => {
     const devMode = process.env.NEXT_PUBLIC_DEV_MODE === 'true'
     if (devMode) {
       router.replace('/exam-engine/maker')
-    } else {
-      router.replace('/login?service=exam-engine')
+      return
     }
-  }, [router])
+
+    if (isLoading) return
+
+    if (!isAuthenticated || !user) {
+      router.replace('/login?service=exam-engine')
+      return
+    }
+
+    if (user.role === 'super_admin' || user.role === 'master') {
+      router.replace('/exam-engine/maker')
+      return
+    }
+
+    if (subscriptions.includes('exam-engine')) {
+      router.replace('/exam-engine/taker')
+      return
+    }
+
+    router.replace('/login?service=exam-engine')
+  }, [router, isAuthenticated, isLoading, user, subscriptions])
 
   return (
     <div className="flex items-center justify-center min-h-screen">

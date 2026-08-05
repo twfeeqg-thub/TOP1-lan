@@ -1,16 +1,19 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { LogOut } from 'lucide-react'
+import { LogOut, UserCog } from 'lucide-react'
+import { useState } from 'react'
 import { useApp } from '@/app/providers'
 import { useAuth } from '@/context/AuthContext'
 import { getPageTitle } from '../../components/nav-items'
 import ThemeSwitcher from '@/components/auth/ThemeSwitcher'
+import { EditProfileModal } from '@/components/auth/EditProfileModal'
 
 export function TopbarV2() {
   const pathname = usePathname()
   const { lang } = useApp()
   const { user, logout } = useAuth()
+  const [profileOpen, setProfileOpen] = useState(false)
   const title = getPageTitle(pathname, lang)
 
   return (
@@ -30,6 +33,14 @@ export function TopbarV2() {
         </div>
 
         <button
+          onClick={() => setProfileOpen(true)}
+          className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+          title={lang === 'ar' ? 'تعديل بيانات الحساب' : 'Edit account settings'}
+        >
+          <UserCog className="w-4 h-4" />
+        </button>
+
+        <button
           onClick={logout}
           className="p-2 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
           title={lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}
@@ -37,6 +48,8 @@ export function TopbarV2() {
           <LogOut className="w-4 h-4" />
         </button>
       </div>
+
+      <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
     </header>
   )
 }

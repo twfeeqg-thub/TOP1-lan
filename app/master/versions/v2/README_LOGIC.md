@@ -3,5 +3,5 @@
 
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
 - **MasterLayout.tsx**: يرتبط بـ [  |  |  ]
-- **Sidebar.tsx**: يرتبط بـ [  |  |  |  |  |  ]
-- **Topbar.tsx**: يرتبط بـ [  |  |  |  |  |  ]
+- **Sidebar.tsx**: يرتبط بـ [  |  |  |  |  |  |  ]
+- **Topbar.tsx**: يرتبط بـ [  |  |  |  |  |  |  |  ]

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { poolAdmin } from '@/lib/supabase-pool';
-import { REFRESH_COOKIE_NAME } from '@/lib/auth';
+import { REFRESH_COOKIE_NAME, ACCESS_COOKIE_NAME, REFRESH_COOKIE_OPTIONS, ACCESS_COOKIE_OPTIONS } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +15,9 @@ export async function POST(request: NextRequest) {
     }
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set(REFRESH_COOKIE_NAME, '', { ...request.cookies.get(REFRESH_COOKIE_NAME), maxAge: 0, path: '/api/auth' });
+
+    response.cookies.set(REFRESH_COOKIE_NAME, '', { ...REFRESH_COOKIE_OPTIONS, maxAge: 0 });
+    response.cookies.set(ACCESS_COOKIE_NAME, '', { ...ACCESS_COOKIE_OPTIONS, maxAge: 0 });
 
     return response;
   } catch {

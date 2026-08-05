@@ -39,8 +39,11 @@ const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
             placeholder="7XX XXX XXX"
             value={value}
             onChange={(e) => {
-              const raw = e.target.value.replace(/[^\d]/g, '');
-              const limited = raw.slice(0, 9);
+              let digits = e.target.value.replace(/[^\d]/g, '');
+              if (digits.startsWith('00')) digits = digits.slice(2);
+              if (digits.startsWith('967') && digits.length > 9) digits = digits.slice(3);
+              digits = digits.replace(/^0+/, '');
+              const limited = digits.slice(0, 9);
               onChange?.(limited);
             }}
             onFocus={() => setFocused(true)}

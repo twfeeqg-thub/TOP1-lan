@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { poolAdmin } from '@/lib/supabase-pool';
-import { signAccessToken, REFRESH_COOKIE_NAME } from '@/lib/auth';
+import {
+  signAccessToken,
+  generateRefreshToken,
+  REFRESH_COOKIE_NAME,
+  REFRESH_COOKIE_OPTIONS,
+  ACCESS_COOKIE_NAME,
+  ACCESS_COOKIE_OPTIONS,
+  type AuthRole,
+} from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,9 +47,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found or inactive' }, { status: 401 });
     }
 
-    const accessToken = signAccessToken({ userId: user.id, phone: user.phone, role: user.role });
+    const nextRefreshToken = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + REFRESH_COOKIE_OPTIONS.maxAge * 1000).toISOString();
 
-    return NextResponse.json({ access_token: accessToken });
+    await poolAdmin.client
+      .schema('core')
+      .from('sessions')
+      .update({ refresh_token: nextRefreshToken, expires_at: expiresAt })
+      .eq('id', session.id);
+
+    const accessToken = signAccessToken({ userId: user.id, phone: user.phone, role: user.role as AuthRole });
+
+    const response = NextResponse.json({ access_token: accessToken });
+
+    response.cookies.set(REFRESH_COOKIE_NAME, nextRefreshToken, REFRESH_COOKIE_OPTIONS);
+    response.cookies.set(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS);
+
+    return response;
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -2,12 +2,14 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-dev-only';
-const SALT_ROUNDS = 12;
+export const SALT_ROUNDS = 10;
+
+export type AuthRole = 'user' | 'master' | 'super_admin';
 
 export interface JwtPayload {
   userId: string;
   phone: string;
-  role: 'user' | 'master';
+  role: AuthRole;
 }
 
 export function signAccessToken(payload: JwtPayload): string {
@@ -45,4 +47,15 @@ export const REFRESH_COOKIE_OPTIONS = {
   sameSite: 'strict' as const,
   path: '/api/auth',
   maxAge: REFRESH_TOKEN_MAX_AGE,
+};
+
+export const ACCESS_COOKIE_NAME = 'aisahl_access_token';
+export const ACCESS_TOKEN_MAX_AGE = 15 * 60;
+
+export const ACCESS_COOKIE_OPTIONS = {
+  httpOnly: false,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  path: '/',
+  maxAge: ACCESS_TOKEN_MAX_AGE,
 };

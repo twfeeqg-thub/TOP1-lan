@@ -7,24 +7,32 @@
 - **REST API فقط**: لا استخدام لـ WebSockets في المصادقة. كل شيء عبر طلبات HTTP تقليدية.
 - **رقم الهاتف هو المعرف الأساسي (Primary Identifier)**: لا بريد إلكتروني، لا اسم مستخدم. رقم الهاتف هو المفتاح.
 - **حماية الجلسة بـ HttpOnly Cookie**: الـ Refresh Token يُخزَّن فقط في Cookie من نوع HttpOnly مع SameSite=Strict لحمايته من هجمات XSS.
-- **اتصال قاعدة البيانات عبر REST API (Service Role)**: تُستخدم `poolAdmin` من `lib/supabase-pool` (supabase-js على منفذ 443 مع Service Role و schema `core`) — وليس pg Pooler. الـ Pooler (pg على منفذ 6543) مخصص للعمليات الثقيلة والتدقيق في لوحة الماستر فقط.
-- **دعم Push Tokens**: كل مستخدم يمكنه ربط push_tokens لحسابه للإشعارات الفورية.
+- **تدوير الـ Refresh Token (Rotation)**: عند كل تجديد يتم توليد رمز جديد وتحديث صف الجلسة وإبطال القديم — لا يُعاد استخدام رمز ثابت.
+- **هوية الخادم لا ادعاءات العميل**: أي عملية حساسة (`session`, `update-profile`) تستخلص الهوية من كوكي الجلسة عبر `resolveSessionFromRequest` في `lib/auth-session.ts` — لا يُثق بأي `userId` من العميل.
+- **التسجيل وحدة متكاملة (Transaction)**: إنشاء الـ tenant + المستخدم + الاشتراك في معاملة SQL واحدة عبر `pool` (pg) لضمان عدم وجود بيانات يتيمة عند الفشل.
+- **المالك السيادي يتجاوز كل شيء**: عند دخول `super_admin` تُضمن اشتراكات `enterprise` لكل مشاريع المنصة التعليمية تلقائياً (`lib/subscriptions-server.ts`).
+- **الاعتماديات السرية للحقن**: `SEED_OWNER_NAME/PHONE/PASSWORD` تُقرأ من `.env.local` فقط وليس من الكود (انظر `scripts/seed-owner.ts`).
+- **الاتصال بقاعدة البيانات**: تُستخدم `poolAdmin` (REST / Service Role على منفذ 443) لعمليات المصادقة العامة، بينما يُستخدم `pool` (pg) للمعاملات الذرّية والتدقيق.
 
 ## الهيكل الآلي (Auto-Structure)
 
 ```
 app/api/auth/
-├── register/route.ts    ← إنشاء حساب (هاتف + كلمة مرور + اسم)
-├── login/route.ts       ← تسجيل الدخول (هاتف + كلمة مرور)
-├── logout/route.ts      ← إنهاء الجلسة (إبطال refresh_token)
-├── refresh/route.ts     ← تجديد access_token عبر refresh_token
-├── check-phone/route.ts ← التحقق من توفر رقم الهاتف
-└── push-token/route.ts  ← ربط push_token للحساب
+├── register/route.ts       ← تسجيل: tenant + مستخدم + اشتراك pro في معاملة واحدة
+├── login/route.ts          ← دخول + ضمان اشتراكات المالك + جلسة جديدة
+├── logout/route.ts         ← إبطال الجلسة ومسح كلا الكوكيز
+├── refresh/route.ts        ← تجديد access + تدوير refresh token
+├── session/route.ts        ← استعادة الجلسة من كوكي HttpOnly فقط (user + subscriptions)
+├── check-phone/route.ts    ← فحص توفر الرقم (يدعم exclude لاستثناء الرقم الحالي)
+├── update-profile/route.ts ← تعديل بيانات الحساب (اسم/هاتف/كلمة مرور) بهوية خادمية
+└── push-token/route.ts     ← ربط push_token للحساب
 ```
 
 ## القواعد المطلقة
 1. لا WebSockets في المصادقة — REST فقط.
 2. رقم الهاتف هو المعرف الوحيد — لا بريد إلكتروني.
-3. الـ refresh_token يجب أن يكون HttpOnly Cookie دائماً.
-4. الاتصال بقاعدة البيانات يجب أن يستخدم poolAdmin (REST / Service Role على منفذ 443) لجميع عمليات المصادقة.
-5. الـ access_token قصير العمر (15 دقيقة) ويُحمل في رد JSON + Cookie غير HttpOnly للوصول السريع.
+3. الـ refresh_token يجب أن يكون HttpOnly Cookie دائماً، مع SameSite=Strict.
+4. كل عملية حساسة تستخلص الهوية من الجلسة (HttpOnly) وليس من body/query من العميل.
+5. كلمة المرور الجديدة: ≥ 8 أحرف + حروف + أرقام، وتشترط تأكيد كلمة المرور الحالية.
+6. تغيير الهاتف يستلزم فحص التفرد واستبعاد رقم المستخدم نفسه.
+7. الأكواد الحساسة (الاعتماديات) لا تُكتب في الكود أبداً — تُقرأ من `.env.local`.

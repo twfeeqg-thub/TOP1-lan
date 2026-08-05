@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
 import { LayoutDashboard, FolderKanban, Megaphone, Zap, Grid3x3, Users, Settings } from 'lucide-react'
+import type { AuthRole } from '@/lib/auth'
 
 export interface NavItem {
   id: string
@@ -10,19 +11,26 @@ export interface NavItem {
   labelEn: string
   href: string
   icon: LucideIcon
+  roles: AuthRole[]
 }
 
 export const navItems: NavItem[] = [
-  { id: 'dashboard', labelAr: 'لوحة القيادة', labelEn: 'Dashboard', href: '/master', icon: LayoutDashboard },
-  { id: 'projects', labelAr: 'المشاريع', labelEn: 'Projects', href: '/master/projects', icon: FolderKanban },
-  { id: 'ads', labelAr: 'الإعلانات', labelEn: 'Ads', href: '/master/ads', icon: Megaphone },
-  { id: 'features', labelAr: 'الميزات', labelEn: 'Features', href: '/master/features', icon: Zap },
-  { id: 'sectors', labelAr: 'القطاعات', labelEn: 'Sectors', href: '/master/sectors', icon: Grid3x3 },
-  { id: 'users', labelAr: 'المستخدمون', labelEn: 'Users', href: '/master/users', icon: Users },
-  { id: 'settings', labelAr: 'الإعدادات', labelEn: 'Settings', href: '/master/settings', icon: Settings },
+  { id: 'dashboard', labelAr: 'لوحة القيادة', labelEn: 'Dashboard', href: '/master', icon: LayoutDashboard, roles: ['super_admin', 'master'] },
+  { id: 'projects', labelAr: 'المشاريع', labelEn: 'Projects', href: '/master/projects', icon: FolderKanban, roles: ['super_admin', 'master'] },
+  { id: 'ads', labelAr: 'الإعلانات', labelEn: 'Ads', href: '/master/ads', icon: Megaphone, roles: ['super_admin', 'master'] },
+  { id: 'features', labelAr: 'الميزات', labelEn: 'Features', href: '/master/features', icon: Zap, roles: ['super_admin', 'master'] },
+  { id: 'sectors', labelAr: 'القطاعات', labelEn: 'Sectors', href: '/master/sectors', icon: Grid3x3, roles: ['super_admin', 'master'] },
+  { id: 'users', labelAr: 'المستخدمون', labelEn: 'Users', href: '/master/users', icon: Users, roles: ['super_admin'] },
+  { id: 'settings', labelAr: 'الإعدادات', labelEn: 'Settings', href: '/master/settings', icon: Settings, roles: ['super_admin', 'master'] },
 ]
 
-export function useNavItems() {
+export function getNavItems(role?: string | null): NavItem[] {
+  if (role === 'super_admin') return navItems
+  if (role === 'master') return navItems.filter((n) => n.roles.includes('master'))
+  return []
+}
+
+export function useNavItems(role?: string | null) {
   const pathname = usePathname()
 
   const isActive = (href: string) => {
@@ -30,7 +38,7 @@ export function useNavItems() {
     return pathname.startsWith(href)
   }
 
-  return { navItems, isActive }
+  return { navItems: getNavItems(role), isActive }
 }
 
 export function getPageTitle(pathname: string, lang: 'ar' | 'en'): string {
