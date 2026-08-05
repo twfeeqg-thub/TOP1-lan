@@ -23,7 +23,8 @@
 ├── lib/
 │   ├── db.ts                ← Dexie.js (IndexedDB) للتخزين المحلي
 │   ├── supabase.ts          ← عميل Supabase للمتصفح (Anon Key)
-│   └── supabase-pool.ts     ← عميل Supabase للخادم (Service Role Key)
+│   ├── supabase-pool.ts     ← pg Pooler (6543) + logAudit للخادم، و poolAdmin (REST/Service Role)
+│   └── get-sector-data.ts   ← قراءة full_data من core.sectors (فصل خطأ القاعدة عن انقطاع الشبكة)
 ├── hooks/
 │   └── use-projects.ts      ← React Query + Cache مع Fallback
 └── .cursorrules             ← دستور التنفيذ الصارم
@@ -33,3 +34,4 @@
 1. لا يجوز كتابة أي نص ثابت في أي قالب عرض. كل المحتوى من JSONB.
 2. يجب أن يظل نظام التخزين المحلي (IndexedDB/Dexie.js) قائماً في كل الطبقات.
 3. أي إضافة جديدة يجب أن تكون "إضافة" (Add-on) لا تعديل للقائم إلا بإذن صريح.
+4. لا تُستخدم البيانات الوهمية (mock) في العرض أو المسارات — تُكتفى بالاحتفاظ بها معطّلة (Conditional Deletion).

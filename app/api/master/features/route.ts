@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { pool, logAudit } from '@/lib/supabase-pool'
 
-interface Feature {
+export const runtime = 'nodejs'
+
+interface FeatureRow {
   id: string
   name: string
   description: string
@@ -12,76 +15,10 @@ interface Feature {
   enabled_schools: number[]
 }
 
-const featuresMock: Feature[] = [
-  {
-    id: '1',
-    name: 'دفع إلكتروني',
-    description: 'بوابة دفع متكاملة تدعم العملات المتعددة',
-    slug: 'e-payment',
-    is_active: true,
-    icon: 'Zap',
-    priority: 'عالية',
-    enabled_schools: [1, 2, 3],
-  },
-  {
-    id: '2',
-    name: 'نظام صلاحيات',
-    description: 'إدارة صلاحيات المستخدمين والأدوار',
-    slug: 'permissions',
-    is_active: true,
-    icon: 'Shield',
-    priority: 'عالية',
-    enabled_schools: [1, 2, 3, 4, 5],
-  },
-  {
-    id: '3',
-    name: 'تقارير متقدمة',
-    description: 'لوحات تحليل وتقارير مخصصة',
-    slug: 'advanced-reports',
-    is_active: false,
-    icon: 'BarChart3',
-    priority: 'متوسطة',
-    enabled_schools: [],
-  },
-  {
-    id: '4',
-    name: 'دعم متعدد اللغات',
-    description: 'واجهة كاملة بالعربية والإنجليزية',
-    slug: 'multi-lang',
-    is_active: true,
-    icon: 'Globe',
-    priority: 'متوسطة',
-    enabled_schools: [1, 2, 4],
-  },
-  {
-    id: '5',
-    name: 'أمان متقدم',
-    description: 'تشفير البيانات والمصادقة الثنائية',
-    slug: 'advanced-security',
-    is_active: true,
-    icon: 'Lock',
-    priority: 'عالية',
-    enabled_schools: [1, 2, 3, 5],
-  },
-  {
-    id: '6',
-    name: 'تطبيق جوّال',
-    description: 'تطبيق iOS و Android',
-    slug: 'mobile-app',
-    is_active: false,
-    icon: 'Smartphone',
-    priority: 'منخفضة',
-    enabled_schools: [],
-  },
-]
-
-const mockSchools = [
-  { id: 1, name: 'مدرسة الفاروق' },
-  { id: 2, name: 'مدرسة النور' },
-  { id: 3, name: 'مدرسة الأندلس' },
-  { id: 4, name: 'مدرسة القدس' },
-  { id: 5, name: 'مدرسة الفلاح' },
-]
+interface SchoolRow {
+  id: number
+  name: string
+}
 
 const toggleSchema = z.object({
   id: z.string(),
@@ -93,14 +30,44 @@ const schoolSelectSchema = z.object({
   school_ids: z.array(z.number()),
 })
 
+function mapFeature(row: FeatureRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    slug: row.slug,
+    is_active: row.is_active,
+    icon: row.icon,
+    priority: row.priority,
+    enabled_schools: row.enabled_schools ?? [],
+  }
+}
+
+function dbDown() {
+  return NextResponse.json({ error: 'DATABASE_URL not configured' }, { status: 503 })
+}
+
 export async function GET() {
-  return NextResponse.json({
-    data: featuresMock,
-    schools: mockSchools,
-  })
+  if (!pool) return dbDown()
+  try {
+    const featuresResult = await pool.query<FeatureRow>(
+      'SELECT id, name, description, slug, is_active, icon, priority, enabled_schools FROM core.features ORDER BY created_at;'
+    )
+    const schoolsResult = await pool.query<SchoolRow>(
+      'SELECT id, name FROM core.schools ORDER BY id;'
+    )
+    return NextResponse.json({
+      data: featuresResult.rows.map(mapFeature),
+      schools: schoolsResult.rows,
+    })
+  } catch (err) {
+    console.error('[master:features] GET failed', err)
+    return NextResponse.json({ error: 'فشل جلب الميزات' }, { status: 500 })
+  }
 }
 
 export async function PATCH(request: NextRequest) {
+  if (!pool) return dbDown()
   try {
     const body = await request.json()
     const parsed = toggleSchema.safeParse(body)
@@ -111,20 +78,32 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const feature = featuresMock.find((f) => f.id === parsed.data.id)
-    if (!feature) {
+    const result = await pool.query<FeatureRow>(
+      `UPDATE core.features SET is_active = $2 WHERE id = $1
+       RETURNING id, name, description, slug, is_active, icon, priority, enabled_schools;`,
+      [parsed.data.id, parsed.data.is_active]
+    )
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
     }
 
-    feature.is_active = parsed.data.is_active
+    await logAudit({
+      action: 'feature.toggle',
+      entity_type: 'feature',
+      entity_id: parsed.data.id,
+      details: parsed.data.is_active ? 'تفعيل ميزة' : 'إيقاف ميزة',
+      severity: 'info',
+    })
 
-    return NextResponse.json({ data: feature })
-  } catch {
+    return NextResponse.json({ data: mapFeature(result.rows[0]) })
+  } catch (err) {
+    console.error('[master:features] PATCH failed', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
+  if (!pool) return dbDown()
   try {
     const body = await request.json()
     const parsed = schoolSelectSchema.safeParse(body)
@@ -135,15 +114,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const feature = featuresMock.find((f) => f.id === parsed.data.id)
-    if (!feature) {
+    const result = await pool.query<FeatureRow>(
+      `UPDATE core.features SET enabled_schools = $2::int[] WHERE id = $1
+       RETURNING id, name, description, slug, is_active, icon, priority, enabled_schools;`,
+      [parsed.data.id, parsed.data.school_ids]
+    )
+    if (result.rows.length === 0) {
       return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
     }
 
-    feature.enabled_schools = parsed.data.school_ids
+    await logAudit({
+      action: 'feature.schools',
+      entity_type: 'feature',
+      entity_id: parsed.data.id,
+      details: `تحديث المدارس المفعّلة (${parsed.data.school_ids.length})`,
+      severity: 'info',
+    })
 
-    return NextResponse.json({ data: feature })
-  } catch {
+    return NextResponse.json({ data: mapFeature(result.rows[0]) })
+  } catch (err) {
+    console.error('[master:features] POST failed', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

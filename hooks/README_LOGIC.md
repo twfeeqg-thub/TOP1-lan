@@ -1,5 +1,5 @@
 ### المنطق البشري (HUMAN_LOGIC)
-(يتم توثيق هدف هذا المجلد هنا لاحقاً)
+- **use-projects.ts**: جلب المشاريع والإعلانات عبر React Query مع كاش IndexedDB (Dexie). أي استعلام ناجح يُرجع `data ?? []` دائماً — لا ابتلاع وهمي. الفشل يُطبع بـ `console.error` ثم يقرأ الكاش؛ `fallbackProjects`/`AD_FALLBACK` لا يُستخدمان إلا عند انقطاع تام (`!navigator.onLine`) وخلوّ الكاش.
 
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
 - **use-mobile.ts**: يرتبط بـ [  ]

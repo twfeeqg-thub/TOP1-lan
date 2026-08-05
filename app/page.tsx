@@ -25,7 +25,7 @@ import {
 import { useApp } from './providers';
 import { useProjects, useAds } from '@/hooks/use-projects';
 import { clearCache } from '@/lib/db';
-import { Ad_Renderer_Component, AD_FALLBACK, type Ad } from '@/components/ad-renderer';
+import { Ad_Renderer_Component, type Ad } from '@/components/ad-renderer';
 import { ClientAdRequestModal } from '@/components/ads/client-ad-request-modal';
 
 // ==========================================
@@ -213,7 +213,7 @@ export default function LandingPage() {
 
   const { data: projects = [] } = useProjects();
   const { data: adsRaw } = useAds();
-  const ads = Array.isArray(adsRaw) && adsRaw.length > 0 ? adsRaw : AD_FALLBACK;
+  const ads = Array.isArray(adsRaw) ? adsRaw : [];
 
   // Modal Interaction States
   const [selectedSector, setSelectedSector] = useState<any>(null);

@@ -106,7 +106,7 @@ export const Ad_Renderer_Component = ({
     return () => { cancelled = true }
   }, [])
 
-  const safeAds = Array.isArray(ads) && ads.length > 0 ? ads : AD_FALLBACK
+  const safeAds = Array.isArray(ads) ? ads : []
   let filteredAds = safeAds.filter(a => a?.ad_config?.placement === placement && a?.ad_config?.lang === lang)
   if (filteredAds.length === 0) {
     filteredAds = safeAds.filter(a => a?.ad_config?.lang === lang)

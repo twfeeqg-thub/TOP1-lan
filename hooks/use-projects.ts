@@ -24,13 +24,13 @@ async function fetchProjectsWithCache() {
 
     if (error) throw error;
 
-    const result = Array.isArray(data) && data.length > 0 ? data : fallbackProjects;
+    const result = Array.isArray(data) ? (data as any[]) : [];
     await cacheData(PROJECTS_KEY, result);
     return result;
-  } catch {
+  } catch (err) {
+    console.error('[use-projects] fetch failed', err);
     const cached = await getCachedData<any[]>(PROJECTS_KEY);
-    if (cached) return cached;
-    return fallbackProjects;
+    return cached ?? [];
   }
 }
 
@@ -122,19 +122,20 @@ async function fetchAdsWithCache() {
       .select('*');
     if (error) throw error;
 
-    const result = Array.isArray(data) && data.length > 0 ? (data as Ad[]) : AD_FALLBACK;
+    const result = Array.isArray(data) ? (data as Ad[]) : [];
     try {
       await cacheData(ADS_KEY, result);
     } catch {
     }
     return result;
-  } catch {
+  } catch (err) {
+    console.error('[use-ads] fetch failed', err);
     try {
       const cached = await getCachedData<Ad[]>(ADS_KEY);
       if (cached) return cached;
     } catch {
     }
-    return AD_FALLBACK;
+    return [];
   }
 }
 
