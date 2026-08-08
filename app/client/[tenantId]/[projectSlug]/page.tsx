@@ -129,7 +129,7 @@ export default function ClientCustomizerPage() {
 
         <div className="p-4 sm:p-6">
           {ws.activeTab === 'branding' && (
-            <BrandingTab value={ws.draft} onChange={ws.patchConfig} />
+            <BrandingTab value={ws.draft} onChange={ws.patchConfig} tenantId={tenantId} />
           )}
           {ws.activeTab === 'appearance' && (
             <AppearanceTab value={ws.draft} onChange={ws.patchConfig} />

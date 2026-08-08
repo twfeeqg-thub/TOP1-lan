@@ -4,17 +4,22 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react'
 import type { Testimonial } from '@/lib/sector-types'
+import { resolveLangText } from '@/lib/i18n-sector'
+import { useApp } from '@/app/providers'
 import { usePsychMessage } from '@/hooks/use-psych-message'
 import { appreciationMessages } from '@/lib/psych-support'
 
 export default function DynamicTestimonials({ testimonials }: { testimonials: Testimonial[] }) {
   const [activeIndex, setActiveIndex] = useState(0)
+  const { lang } = useApp()
 
   const appreciationMsg = usePsychMessage(appreciationMessages)
 
   if (!testimonials || testimonials.length === 0) return null
 
   const current = testimonials[activeIndex]
+  const content = resolveLangText(current.content, current.content_en, lang)
+  const role = resolveLangText(current.role, current.role_en, lang)
 
   const goNext = () => setActiveIndex((prev) => (prev + 1) % testimonials.length)
   const goPrev = () => setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
@@ -39,7 +44,7 @@ export default function DynamicTestimonials({ testimonials }: { testimonials: Te
               className="text-base md:text-lg leading-relaxed text-center max-w-3xl mx-auto mb-8 min-h-[80px]"
               style={{ color: 'var(--text-main)' }}
             >
-              {current.content}
+              {content}
             </p>
 
             <div className="flex items-center justify-center gap-4 mb-4">
@@ -58,7 +63,7 @@ export default function DynamicTestimonials({ testimonials }: { testimonials: Te
                 </p>
                 {current.role && (
                   <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                    {current.role}
+                    {role}
                   </p>
                 )}
               </div>

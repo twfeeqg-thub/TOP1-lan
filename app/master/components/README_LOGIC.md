@@ -17,5 +17,6 @@
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
 - **nav-items.tsx**: يرتبط بـ [  |  |  |  ]
 - **offline-sync-pump.tsx**: يرتبط بـ [  |  |  ]
+- **require-role.tsx**: يرتبط بـ [  |  |  |  |  ]
 - **sidebar-logo.tsx**: يرتبط بـ [  ]
 - **stats-card.tsx**: يرتبط بـ [  |  |  ]

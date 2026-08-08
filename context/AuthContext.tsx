@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { db } from '@/lib/db';
+import { getRandomMessage, farewellMessages } from '@/lib/psych-support';
+import { LogoutFarewell } from '@/components/auth/LogoutFarewell';
 
 export interface AuthUser {
   id: string;
@@ -17,6 +19,7 @@ interface AuthContextType {
   subscriptions: string[];
   isAuthenticated: boolean;
   isLoading: boolean;
+  logoutFarewell: string | null;
   login: (accessToken: string, user: AuthUser, subscriptions?: string[]) => void;
   logout: () => Promise<void>;
   refreshToken: () => Promise<boolean>;
@@ -67,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(initState.token);
   const [subscriptions, setSubscriptions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [logoutFarewell, setLogoutFarewell] = useState<string | null>(null);
 
   const syncSession = useCallback(async (): Promise<string[]> => {
     const res = await fetch('/api/auth/session');
@@ -120,9 +124,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await Promise.all([db.projects.clear(), db.outbox.clear()]);
     } catch {}
 
+    // PWA CACHE PURGE — drop every Service-Worker cache so the next login on
+    // this device can never render another tenant's stale layout (aisahl-static-v1).
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch {}
+    }
+
     setAccessToken(null);
     setUser(null);
     setSubscriptions([]);
+
+    // Warm farewell before the hard redirect — the LogoutFarewell overlay
+    // (mounted below) auto-navigates after ~1.2s with a strict 1.5s fallback,
+    // so the timer can never strand the user on a locked screen.
+    setLogoutFarewell(getRandomMessage(farewellMessages));
   }, []);
 
   const refreshToken = useCallback(async (): Promise<boolean> => {
@@ -173,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         subscriptions,
         isAuthenticated: !!user && !!accessToken,
         isLoading,
+        logoutFarewell,
         login,
         logout,
         refreshToken,
@@ -181,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      <LogoutFarewell message={logoutFarewell} />
     </AuthContext.Provider>
   );
 }

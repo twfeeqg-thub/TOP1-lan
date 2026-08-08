@@ -3,12 +3,13 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { Testimonial } from '@/lib/sector-types'
 
-interface TestimonialsSectionFormProps {
+interface Props {
   data: Testimonial[]
   onChange: (data: Testimonial[]) => void
 }
 
-export function TestimonialsSectionForm({ data, onChange }: TestimonialsSectionFormProps) {
+export function TestimonialsSectionForm({ data, onChange }: Props) {
+  const safeData = data ?? []
   const addTestimonial = () => {
     const newItem: Testimonial = {
       id: `test-${Date.now()}`,
@@ -17,20 +18,20 @@ export function TestimonialsSectionForm({ data, onChange }: TestimonialsSectionF
       content: '',
       avatar: '',
     }
-    onChange([...data, newItem])
+    onChange([...safeData, newItem])
   }
 
   const updateTestimonial = (id: string, field: keyof Testimonial, value: string) => {
-    onChange(data.map((t) => (t.id === id ? { ...t, [field]: value } : t)))
+    onChange(safeData.map((t) => (t.id === id ? { ...t, [field]: value } : t)))
   }
 
   const removeTestimonial = (id: string) => {
-    onChange(data.filter((t) => t.id !== id))
+    onChange(safeData.filter((t) => t.id !== id))
   }
 
   return (
     <div className="space-y-4">
-      {data.map((testimonial, ti) => (
+      {safeData.map((testimonial, ti) => (
         <div key={testimonial.id} className="glass-card rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--text-main)]">رأي {ti + 1}</span>

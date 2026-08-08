@@ -2,6 +2,8 @@
 
 import { motion } from 'motion/react'
 import type { About } from '@/lib/sector-types'
+import { resolveLangText } from '@/lib/i18n-sector'
+import { useApp } from '@/app/providers'
 import { usePsychMessage } from '@/hooks/use-psych-message'
 import { trustMessages } from '@/lib/psych-support'
 import IconFrame from './IconFrame'
@@ -14,9 +16,17 @@ const highlightIconMap: Record<string, React.ReactNode> = {
 }
 
 export default function DynamicAbout({ about }: { about: About }) {
+  const { lang } = useApp()
   const trustMsg = usePsychMessage(trustMessages)
 
-  if (!about?.title && !about?.description) return null
+  const title = resolveLangText(about?.title, about?.title_en, lang)
+  const description = resolveLangText(about?.description, about?.description_en, lang)
+  const highlights = (about?.highlights ?? []).map((h) => ({
+    ...h,
+    text: resolveLangText(h.text, h.text_en, lang),
+  }))
+
+  if (!title && !description) return null
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">
@@ -27,20 +37,20 @@ export default function DynamicAbout({ about }: { about: About }) {
         transition={{ type: 'spring', stiffness: 140, damping: 16 }}
         className="glass-card rounded-2xl p-8 md:p-12"
       >
-        {about.title && (
+        {title && (
           <h2
             className="text-2xl md:text-3xl font-bold mb-4 text-center"
             style={{ color: 'var(--text-main)' }}
           >
-            {about.title}
+            {title}
           </h2>
         )}
-        {about.description && (
+        {description && (
           <p
             className="text-base leading-relaxed text-center max-w-3xl mx-auto mb-4"
             style={{ color: 'var(--text-muted)' }}
           >
-            {about.description}
+            {description}
           </p>
         )}
 
@@ -51,9 +61,9 @@ export default function DynamicAbout({ about }: { about: About }) {
           {trustMsg}
         </p>
 
-        {about.highlights && about.highlights.length > 0 && (
+        {highlights.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {about.highlights.map((item, idx) => (
+            {highlights.map((item, idx) => (
               <motion.div
                 key={idx}
                 initial={{ opacity: 0, y: 20 }}

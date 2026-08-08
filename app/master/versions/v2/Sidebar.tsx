@@ -5,6 +5,7 @@ import { motion } from 'motion/react'
 import { useNavItems } from '../../components/nav-items'
 import { SidebarLogo } from '../../components/sidebar-logo'
 import { useAuth } from '@/context/AuthContext'
+import { useHasHydrated } from '@/hooks/use-local-storage'
 import { cn } from '@/lib/utils'
 import { Rocket, PenLine, GraduationCap, Grid3x3 } from 'lucide-react'
 
@@ -21,6 +22,7 @@ const SUPER_ADMIN_JUMPS = [
 
 export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
   const { user } = useAuth()
+  const hydrated = useHasHydrated()
   const { navItems, isActive } = useNavItems(user?.role)
 
   return (
@@ -49,7 +51,7 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
         </button>
       </div>
 
-      {user?.role === 'super_admin' && (
+      {hydrated && user?.role === 'super_admin' && (
         <div className="px-3 py-2">
           <div className={cn('rounded-2xl p-3 glass-card', collapsed && 'px-1')}>
             {!collapsed && (
@@ -124,15 +126,17 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
           <div className="w-9 h-9 rounded-full bg-[var(--sidebar-active-bg)] flex items-center justify-center shrink-0">
             <span className="text-[var(--sidebar-active-text)] text-sm font-bold">
-              {(user?.name || 'A')[0]}
+              {hydrated ? (user?.name || 'A')[0] : ''}
             </span>
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
               <p className="text-sm font-medium text-[var(--sidebar-text)] truncate">
-                {user?.name || 'Admin'}
+                {hydrated ? user?.name || 'Admin' : ''}
               </p>
-              <p className="text-[11px] text-[var(--sidebar-text-muted)]">Super Admin</p>
+              <p className="text-[11px] text-[var(--sidebar-text-muted)]">
+                {hydrated ? (user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'master' ? 'Master' : 'User') : ''}
+              </p>
             </div>
           )}
         </div>

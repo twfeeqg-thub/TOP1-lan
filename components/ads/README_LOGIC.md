@@ -2,5 +2,6 @@
 (يتم توثيق هدف هذا المجلد هنا لاحقاً)
 
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
+- **ad-cta-button.tsx**: يرتبط بـ [  |  ]
 - **client-ad-request-modal.tsx**: يرتبط بـ [  |  |  |  |  |  ]
 - **master-ad-modal.tsx**: يرتبط بـ [  |  |  |  |  |  ]

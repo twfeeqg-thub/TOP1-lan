@@ -12,6 +12,8 @@
     "db:migrate:overrides": "tsx scripts/migrate-overrides.ts",
     "db:migrate:audit2": "tsx scripts/migrate-audit-phase2.ts",
     "db:migrate:phase3": "tsx scripts/migrate-phase3.ts",
+    "db:migrate:i18n": "tsx scripts/migrate-sector-i18n.ts",
+    "db:migrate:branding": "tsx scripts/migrate-branding-feature.ts",
     "dna:update": "node scripts/generate-dna.js",
     "clean": "next clean"
   },

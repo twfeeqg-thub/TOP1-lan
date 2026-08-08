@@ -8,6 +8,6 @@
 - **LegalFooterSectionForm.tsx**: يرتبط بـ [  |  ]
 - **PartnersSectionForm.tsx**: يرتبط بـ [  |  ]
 - **ProjectsSectionForm.tsx**: يرتبط بـ [  |  ]
-- **SectorCard.tsx**: يرتبط بـ [  |  |  |  |  ]
+- **SectorCard.tsx**: يرتبط بـ [  |  |  |  |  |  ]
 - **SectorFormWrapper.tsx**: يرتبط بـ [  |  |  |  |  |  |  |  |  |  |  |  ]
 - **TestimonialsSectionForm.tsx**: يرتبط بـ [  |  ]

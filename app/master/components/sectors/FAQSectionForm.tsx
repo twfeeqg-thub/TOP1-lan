@@ -3,32 +3,33 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { FAQ } from '@/lib/sector-types'
 
-interface FAQSectionFormProps {
+interface Props {
   data: FAQ[]
   onChange: (data: FAQ[]) => void
 }
 
-export function FAQSectionForm({ data, onChange }: FAQSectionFormProps) {
+export function FAQSectionForm({ data, onChange }: Props) {
+  const safeData = data ?? []
   const addFAQ = () => {
     const newItem: FAQ = {
       id: `faq-${Date.now()}`,
       question: '',
       answer: '',
     }
-    onChange([...data, newItem])
+    onChange([...safeData, newItem])
   }
 
   const updateFAQ = (id: string, field: keyof FAQ, value: string) => {
-    onChange(data.map((f) => (f.id === id ? { ...f, [field]: value } : f)))
+    onChange(safeData.map((f) => (f.id === id ? { ...f, [field]: value } : f)))
   }
 
   const removeFAQ = (id: string) => {
-    onChange(data.filter((f) => f.id !== id))
+    onChange(safeData.filter((f) => f.id !== id))
   }
 
   return (
     <div className="space-y-4">
-      {data.map((faq, fi) => (
+      {safeData.map((faq, fi) => (
         <div key={faq.id} className="glass-card rounded-2xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-[var(--text-main)]">سؤال {fi + 1}</span>

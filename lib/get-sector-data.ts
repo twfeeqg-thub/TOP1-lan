@@ -1,5 +1,6 @@
 import { sectorsMock, sectorFullData } from './sectors-mock-data'
 import type { SectorData } from './sector-types'
+import { resolveSectorForLang, type SectorLang } from './i18n-sector'
 
 export interface SectorResult {
   data: SectorData | null
@@ -22,6 +23,7 @@ export async function getSectorData(slug: string): Promise<SectorResult> {
       .from('sectors')
       .select('*')
       .eq('slug', slug)
+      .eq('is_active', true)
       .single()
   } catch (e) {
     // Network-level failure (fetch threw) — complete offline fallback to mock only.
@@ -42,3 +44,6 @@ export async function getSectorData(slug: string): Promise<SectorResult> {
 
   return { data: full as SectorData, isFallback: false }
 }
+
+export { resolveSectorForLang }
+export type { SectorLang }

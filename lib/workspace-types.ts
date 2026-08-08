@@ -59,6 +59,16 @@ export interface EditableWorkspaceConfig {
   badge_ar?: string;
   badge_en?: string;
   accent_color?: string;
+  /** Platform branding asset URLs (global: /master/settings; tenant: workspace). */
+  logo_url?: string;
+  favicon_url?: string;
+  pwa_icon_url?: string;
+  /** Tier flag for custom brand uploads, read from the compiled config. */
+  feature?: {
+    branding?: {
+      custom_upload?: boolean;
+    };
+  };
   features_ar?: string[];
   features_en?: string[];
   appearance?: WorkspaceAppearance;

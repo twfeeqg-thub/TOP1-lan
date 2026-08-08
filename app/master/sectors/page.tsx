@@ -6,6 +6,7 @@ import { Plus, Loader2, RotateCw } from 'lucide-react'
 import { GlassModal } from '@/components/ui/glass-modal'
 import { SectorCard } from '../components/sectors/SectorCard'
 import { cn } from '@/lib/utils'
+import { getRandomMessage, successMessages } from '@/lib/psych-support'
 import type { SectorSummary } from '@/lib/sector-types'
 
 async function fetchSectors(): Promise<{ data: SectorSummary[] }> {
@@ -39,6 +40,7 @@ export default function SectorsListPage() {
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
   const [newIcon, setNewIcon] = useState('FolderKanban')
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -54,6 +56,8 @@ export default function SectorsListPage() {
       setNewName('')
       setNewSlug('')
       setNewIcon('FolderKanban')
+      setSuccessMsg(getRandomMessage(successMessages))
+      setTimeout(() => setSuccessMsg(null), 3000)
     },
   })
 
@@ -77,6 +81,12 @@ export default function SectorsListPage() {
 
   return (
     <div className="space-y-6">
+      {successMsg && (
+        <div className="glassy-toast flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium text-emerald-500">
+          {successMsg}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-base font-bold text-[var(--text-main)]">إدارة القطاعات</h2>
@@ -135,7 +145,7 @@ export default function SectorsListPage() {
 
       {/* Grid */}
       {!isLoading && !isError && data?.data && data.data.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full">
           {data.data.map((sector, i) => (
             <SectorCard key={sector.id} sector={sector} index={i} onToggle={handleToggle} />
           ))}

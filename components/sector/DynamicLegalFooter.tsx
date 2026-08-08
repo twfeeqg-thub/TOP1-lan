@@ -3,13 +3,23 @@
 import { motion } from 'motion/react'
 import Link from 'next/link'
 import type { LegalFooter } from '@/lib/sector-types'
+import { resolveLangText } from '@/lib/i18n-sector'
+import { useApp } from '@/app/providers'
 import { usePsychMessage } from '@/hooks/use-psych-message'
 import { farewellMessages } from '@/lib/psych-support'
 
 export default function DynamicLegalFooter({ legal_footer }: { legal_footer: LegalFooter }) {
+  const { lang } = useApp()
   const farewellMsg = usePsychMessage(farewellMessages)
 
   if (!legal_footer) return null
+
+  const complianceText = resolveLangText(legal_footer.compliance_text, legal_footer.compliance_text_en, lang)
+  const metaRightsText = resolveLangText(legal_footer.meta_rights_text, legal_footer.meta_rights_text_en, lang)
+  const policyLinks = (legal_footer.policy_links ?? []).map((link) => ({
+    ...link,
+    label: resolveLangText(link.label, (link as { label_en?: string | null }).label_en, lang),
+  }))
 
   return (
     <motion.footer
@@ -21,7 +31,7 @@ export default function DynamicLegalFooter({ legal_footer }: { legal_footer: Leg
       style={{ borderTop: '1px solid var(--card-border)' }}
     >
       <div className="glass-card rounded-2xl p-8 md:p-10 space-y-6">
-        {legal_footer.compliance_text && (
+        {complianceText && (
           <div
             className="text-xs leading-relaxed text-center px-4 py-3 rounded-xl"
             style={{
@@ -29,13 +39,13 @@ export default function DynamicLegalFooter({ legal_footer }: { legal_footer: Leg
               color: 'var(--text-muted)',
             }}
           >
-            {legal_footer.compliance_text}
+            {complianceText}
           </div>
         )}
 
-        {legal_footer.meta_rights_text && (
+        {metaRightsText && (
           <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
-            {legal_footer.meta_rights_text}
+            {metaRightsText}
           </p>
         )}
 
@@ -55,9 +65,9 @@ export default function DynamicLegalFooter({ legal_footer }: { legal_footer: Leg
           )}
         </div>
 
-        {legal_footer.policy_links && legal_footer.policy_links.length > 0 && (
+        {policyLinks.length > 0 && (
           <div className="flex flex-wrap items-center justify-center gap-4">
-            {legal_footer.policy_links.map((link, idx) => (
+            {policyLinks.map((link, idx) => (
               <Link
                 key={idx}
                 href={link.href}

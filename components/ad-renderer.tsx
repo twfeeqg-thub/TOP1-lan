@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { AdCtaButton } from '@/components/ads/ad-cta-button'
 
 export interface Ad {
   id: string
@@ -141,6 +142,24 @@ export const Ad_Renderer_Component = ({
     if (isSlider) startTimer()
   }, [isSlider, startTimer])
 
+  // Impression tracking — fires once per visible ad via the shared track route.
+  // `useRef` guard keeps React StrictMode from double-counting the same ad.
+  const trackedImpression = useRef<string | null>(null)
+  const trackImpression = useCallback((adId: string) => {
+    if (trackedImpression.current === adId) return
+    trackedImpression.current = adId
+    try {
+      fetch('/api/ads/track', {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ad_id: adId, action: 'impression' }),
+      }).catch(() => undefined)
+    } catch {
+      /* analytics must never break rendering */
+    }
+  }, [])
+
   const goNext = useCallback(() => {
     setCurrentIndex(prev => (prev + 1) % filteredAds.length)
     if (isSlider) startTimer()
@@ -150,6 +169,15 @@ export const Ad_Renderer_Component = ({
     setCurrentIndex(prev => (prev - 1 + filteredAds.length) % filteredAds.length)
     if (isSlider) startTimer()
   }, [isSlider, filteredAds.length, startTimer])
+
+  const activeAdId = pinnedAd?.id ?? filteredAds[currentIndex]?.id
+
+  // Impression tracking — fires once per visible ad via the shared track route.
+  // `useRef` guard keeps React StrictMode from double-counting the same ad.
+  useEffect(() => {
+    if (!activeAdId) return
+    trackImpression(activeAdId)
+  }, [activeAdId, trackImpression])
 
   if (isPremiumUser) return null
   if (!killSwitchLoaded) return null
@@ -223,6 +251,18 @@ export const Ad_Renderer_Component = ({
           {cfg?.targetUrl && (
             <button
               onClick={() => {
+                try {
+                  if (ad?.id) {
+                    fetch('/api/ads/track', {
+                      method: 'POST',
+                      keepalive: true,
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ad_id: ad.id, action: 'click' }),
+                    }).catch(() => undefined)
+                  }
+                } catch {
+                  /* analytics must never break navigation */
+                }
                 if (cfg.targetUrl.startsWith('http')) {
                   window.open(cfg.targetUrl, '_blank')
                 } else {
@@ -254,6 +294,8 @@ export const Ad_Renderer_Component = ({
           )}
         </motion.div>
       </AnimatePresence>
+      {/* Generic "add your own ad" CTA — shown under every visible ad slot. */}
+      <AdCtaButton lang={lang} />
     </div>
   )
 }

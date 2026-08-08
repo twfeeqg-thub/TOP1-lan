@@ -9,24 +9,26 @@ interface AboutSectionFormProps {
 }
 
 export function AboutSectionForm({ data, onChange }: AboutSectionFormProps) {
+  const highlights = data?.highlights ?? []
+
   const addHighlight = () => {
     onChange({
       ...data,
-      highlights: [...data.highlights, { text: '', icon: 'CheckCircle' }],
+      highlights: [...highlights, { text: '', icon: 'CheckCircle' }],
     })
   }
 
   const removeHighlight = (idx: number) => {
     onChange({
       ...data,
-      highlights: data.highlights.filter((_, i) => i !== idx),
+      highlights: highlights.filter((_, i) => i !== idx),
     })
   }
 
   const updateHighlight = (idx: number, field: keyof Highlight, value: string) => {
     onChange({
       ...data,
-      highlights: data.highlights.map((h, i) =>
+      highlights: highlights.map((h, i) =>
         i === idx ? { ...h, [field]: value } : h
       ),
     })
@@ -38,7 +40,7 @@ export function AboutSectionForm({ data, onChange }: AboutSectionFormProps) {
         <label className="block text-sm font-medium text-[var(--text-main)] mb-1.5">العنوان</label>
         <input
           type="text"
-          value={data.title}
+          value={data?.title ?? ''}
           onChange={(e) => onChange({ ...data, title: e.target.value })}
           className="w-full px-4 py-2.5 rounded-xl bg-[var(--sidebar-hover-bg)] border border-[var(--card-border)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors"
         />
@@ -46,7 +48,7 @@ export function AboutSectionForm({ data, onChange }: AboutSectionFormProps) {
       <div>
         <label className="block text-sm font-medium text-[var(--text-main)] mb-1.5">الوصف</label>
         <textarea
-          value={data.description}
+          value={data?.description ?? ''}
           onChange={(e) => onChange({ ...data, description: e.target.value })}
           rows={3}
           className="w-full px-4 py-2.5 rounded-xl bg-[var(--sidebar-hover-bg)] border border-[var(--card-border)] text-[var(--text-main)] text-sm focus:outline-none focus:border-[var(--primary)] transition-colors resize-vertical"
@@ -63,7 +65,7 @@ export function AboutSectionForm({ data, onChange }: AboutSectionFormProps) {
           </button>
         </div>
         <div className="space-y-2">
-          {data.highlights.map((h, i) => (
+          {highlights.map((h, i) => (
             <div key={i} className="flex items-center gap-2">
               <input
                 type="text"

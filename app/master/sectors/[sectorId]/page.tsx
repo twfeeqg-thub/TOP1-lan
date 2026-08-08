@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, ArrowLeft, Save } from 'lucide-react'
 import { SectorFormWrapper } from '../../components/sectors/SectorFormWrapper'
-import type { SectorData } from '@/lib/sector-types'
+import { normalizeSectorData, type SectorData } from '@/lib/sector-types'
 
 async function fetchSector(id: string): Promise<{ data: SectorData }> {
   const res = await fetch(`/api/master/sectors/${id}`)
@@ -41,7 +41,7 @@ export default function SectorEditPage() {
   })
 
   if (data && !initialized) {
-    setLocalData(data.data)
+    setLocalData(normalizeSectorData(data.data))
     setInitialized(true)
   }
 

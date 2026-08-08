@@ -11,3 +11,4 @@
 - **use-outbox.ts**: يرتبط بـ [  |  ]
 - **use-projects.ts**: يرتبط بـ [  |  |  ]
 - **use-psych-message.ts**: يرتبط بـ [  ]
+- **use-sectors.ts**: يرتبط بـ [  |  |  ]

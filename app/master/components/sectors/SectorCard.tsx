@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   GraduationCap, HeartPulse, Building2, ShoppingCart, FolderKanban,
 } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { cn } from '@/lib/utils'
 import type { SectorSummary } from '@/lib/sector-types'
@@ -16,16 +17,41 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 interface SectorCardProps {
   sector: SectorSummary
   index: number
-  onToggle: (id: string, checked: boolean) => void
+  onToggle?: (id: string, checked: boolean) => void
+}
+
+async function toggleSectorActive(id: string, is_active: boolean) {
+  const res = await fetch(`/api/master/sectors/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_active }),
+  })
+  if (!res.ok) throw new Error('Failed to toggle sector')
+  return res.json()
 }
 
 export function SectorCard({ sector, index, onToggle }: SectorCardProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const Icon = iconMap[sector.icon] || FolderKanban
+
+  const toggleMutation = useMutation({
+    mutationFn: ({ id, checked }: { id: string; checked: boolean }) =>
+      toggleSectorActive(id, checked),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['master-sectors'] })
+      queryClient.invalidateQueries({ queryKey: ['master-audit'] })
+    },
+  })
+
+  const handleToggle = (checked: boolean) => {
+    toggleMutation.mutate({ id: sector.id, checked })
+    onToggle?.(sector.id, checked)
+  }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
       className={cn(
@@ -51,7 +77,8 @@ export function SectorCard({ sector, index, onToggle }: SectorCardProps) {
         </div>
         <ToggleSwitch
           checked={sector.is_active}
-          onChange={(checked) => onToggle(sector.id, checked)}
+          onChange={handleToggle}
+          label="حالة القطاع"
         />
       </div>
       <h3 className="text-lg font-bold text-[var(--text-main)] mb-1">{sector.name}</h3>

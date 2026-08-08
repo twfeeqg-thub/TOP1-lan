@@ -32,8 +32,8 @@ import {
 } from 'lucide-react';
 import { useApp } from './providers';
 import { useProjects, useAds } from '@/hooks/use-projects';
+import { useSectors } from '@/hooks/use-sectors';
 import { Ad_Renderer_Component, type Ad } from '@/components/ad-renderer';
-import { ClientAdRequestModal } from '@/components/ads/client-ad-request-modal';
 import { useAuth } from '@/context/AuthContext';
 import { EditProfileModal } from '@/components/auth/EditProfileModal';
 import {
@@ -230,6 +230,7 @@ export default function LandingPage() {
   const { data: projects = [] } = useProjects();
   const { data: adsRaw } = useAds();
   const ads = Array.isArray(adsRaw) ? adsRaw : [];
+  const { data: dbSectors = [] } = useSectors();
 
   // Modal Interaction States
   const [selectedSector, setSelectedSector] = useState<any>(null);
@@ -241,7 +242,6 @@ export default function LandingPage() {
 
   // Legal Popups Modal State
   const [activeLegalModal, setActiveLegalModal] = useState<{title: string, content: string} | null>(null);
-  const [adRequestModal, setAdRequestModal] = useState(false);
 
   const subscribedProjects = subscriptions.map((slug) => {
     const projectSlug = APP_SLUG_TO_PROJECT_SLUG[slug];
@@ -260,7 +260,11 @@ export default function LandingPage() {
   // Derive sectors from SECTOR_META + Supabase project data
   const sectors = SECTOR_META.map(meta => {
     const sectorProjects = projects.filter((p: Record<string, unknown>) => mapProjectToSectorId(p as any) === meta.id);
-    const isActive = sectorProjects.some((p: Record<string, unknown>) => (p as any).is_active === true);
+    const hasActiveProject = sectorProjects.some((p: Record<string, unknown>) => (p as any).is_active === true);
+    // Live gate from core.sectors: a toggle in the master panel immediately
+    // flips the public card (is_active=false → visual "under development").
+    const dbSector = dbSectors.find((s) => s.slug === meta.id || s.slug === meta.id.replace(/-/g, ''));
+    const isActive = dbSector ? dbSector.is_active : hasActiveProject;
     return {
       id: meta.id,
       name: lang === 'ar' ? meta.nameAr : meta.nameEn,
@@ -493,14 +497,6 @@ export default function LandingPage() {
 
       {/* Injection Area for Central Ads (Top Placement) - Pulls from ads_engine via Supabase */}
       <Ad_Renderer_Component placement="top" lang={lang} ads={ads} />
-      <div className="flex justify-center -mt-4 mb-2">
-        <button
-          onClick={() => setAdRequestModal(true)}
-          className="text-xs text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors underline underline-offset-4 decoration-dotted decoration-[var(--text-muted)]/30 hover:decoration-[var(--primary)]/50"
-        >
-          أضغط هنا لإضافة إعلانك الخاص
-        </button>
-      </div>
 
       {/* ==========================================
           AUTH-AWARE PANELS - ROLE DRIVEN FROM SESSION
@@ -625,7 +621,7 @@ export default function LandingPage() {
             {sectors.map((sector) => (
               <div
                 key={sector.id}
-                className={`glass-card p-6 rounded-3xl flex flex-col justify-between group transition-all duration-300 relative border-white/5 bg-slate-500/5 ${sector.isActive ? 'ring-2 ring-blue-500/30' : ''}`}
+                className={`glass-card p-6 rounded-3xl flex flex-col justify-between group transition-all duration-300 relative border-white/5 bg-slate-500/5 ${sector.isActive ? 'ring-2 ring-blue-500/30' : 'opacity-60'}`}
                 id={`sector-card-${sector.id}`}
               >
                 {/* Active Indicator Badge */}
@@ -951,8 +947,6 @@ export default function LandingPage() {
           </div>
         </div>
       )}
-
-      <ClientAdRequestModal open={adRequestModal} onClose={() => setAdRequestModal(false)} />
 
       <EditProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
 

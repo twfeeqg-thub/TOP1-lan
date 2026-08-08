@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useApp } from '@/app/providers';
 import { useAuth } from '@/context/AuthContext';
 import { normalizePhone } from '@/lib/phone';
+import { usePsychMessage } from '@/hooks/use-psych-message';
+import { loginErrorMessages, welcomeMessages } from '@/lib/psych-support';
 import AuthSplitLayout from '@/components/auth/AuthSplitLayout';
 import PhoneInput from '@/components/auth/PhoneInput';
 import PasswordInput from '@/components/auth/PasswordInput';
@@ -23,6 +25,9 @@ function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [welcomeMsg, setWelcomeMsg] = useState<string | null>(null);
+  const psychError = usePsychMessage(loginErrorMessages);
+  const psychWelcome = usePsychMessage(welcomeMessages);
 
   useEffect(() => {
     if (!service) {
@@ -60,6 +65,9 @@ function LoginForm() {
       }
 
       login(data.access_token, data.user);
+
+      // Non-blocking warm welcome before redirect (auto-hides after 2s).
+      setWelcomeMsg(psychWelcome);
 
       if (data.redirect_to) {
         router.replace(data.redirect_to);
@@ -101,7 +109,14 @@ function LoginForm() {
 
         {error && (
           <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-500">
-            {error}
+            <p className="font-bold">{psychError}</p>
+            <p className="mt-1 text-xs opacity-80">{error}</p>
+          </div>
+        )}
+
+        {welcomeMsg && (
+          <div className="glassy-toast flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium text-emerald-500">
+            {welcomeMsg}
           </div>
         )}
 

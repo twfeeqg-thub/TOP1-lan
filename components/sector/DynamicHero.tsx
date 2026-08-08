@@ -3,11 +3,22 @@
 import { motion } from 'motion/react'
 import Link from 'next/link'
 import type { Hero } from '@/lib/sector-types'
+import { resolveLangText } from '@/lib/i18n-sector'
+import { useApp } from '@/app/providers'
 import { usePsychMessage } from '@/hooks/use-psych-message'
 import { welcomeMessages } from '@/lib/psych-support'
 
 export default function DynamicHero({ hero }: { hero: Hero }) {
+  const { lang } = useApp()
   const welcomeMsg = usePsychMessage(welcomeMessages)
+
+  const badge = resolveLangText(hero?.badge, hero?.badge_en, lang)
+  const title = resolveLangText(hero?.title, hero?.title_en, lang)
+  const description = resolveLangText(hero?.description, hero?.description_en, lang)
+  const ctaPrimaryText = resolveLangText(hero?.cta_primary?.text, hero?.cta_primary?.text_en, lang)
+  const ctaSecondaryText = resolveLangText(hero?.cta_secondary?.text, hero?.cta_secondary?.text_en, lang)
+  const ctaPrimaryHref = hero?.cta_primary?.href
+  const ctaSecondaryHref = hero?.cta_secondary?.href
 
   return (
     <section
@@ -28,7 +39,7 @@ export default function DynamicHero({ hero }: { hero: Hero }) {
         }}
         className="relative z-10 text-center max-w-4xl mx-auto"
       >
-        {hero.badge && (
+        {badge && (
           <motion.span
             variants={{
               hidden: { opacity: 0, y: -20 },
@@ -42,11 +53,11 @@ export default function DynamicHero({ hero }: { hero: Hero }) {
               border: '1px solid var(--card-border)',
             }}
           >
-            {hero.badge}
+            {badge}
           </motion.span>
         )}
 
-        {hero.title && (
+        {title && (
           <motion.h1
             variants={{
               hidden: { opacity: 0, y: 30 },
@@ -56,11 +67,11 @@ export default function DynamicHero({ hero }: { hero: Hero }) {
             className="text-3xl md:text-5xl lg:text-6xl font-bold leading-tight mb-5"
             style={{ color: 'var(--text-main)' }}
           >
-            {hero.title}
+            {title}
           </motion.h1>
         )}
 
-        {hero.description && (
+        {description && (
           <motion.p
             variants={{
               hidden: { opacity: 0, y: 20 },
@@ -70,7 +81,7 @@ export default function DynamicHero({ hero }: { hero: Hero }) {
             className="text-base md:text-lg leading-relaxed max-w-2xl mx-auto mb-4"
             style={{ color: 'var(--text-muted)' }}
           >
-            {hero.description}
+            {description}
           </motion.p>
         )}
 
@@ -94,18 +105,18 @@ export default function DynamicHero({ hero }: { hero: Hero }) {
           transition={{ type: 'spring', stiffness: 160, damping: 16 }}
           className="flex flex-wrap items-center justify-center gap-4"
         >
-          {hero.cta_primary?.href && (
+          {ctaPrimaryHref && (
             <Link
-              href={hero.cta_primary.href}
+              href={ctaPrimaryHref}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
               style={{ backgroundColor: 'var(--primary)', color: '#ffffff' }}
             >
-              {hero.cta_primary.text}
+              {ctaPrimaryText}
             </Link>
           )}
-          {hero.cta_secondary?.href && (
+          {ctaSecondaryHref && (
             <Link
-              href={hero.cta_secondary.href}
+              href={ctaSecondaryHref}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-sm transition-all duration-200 hover:scale-[1.02]"
               style={{
                 color: 'var(--text-main)',
@@ -114,7 +125,7 @@ export default function DynamicHero({ hero }: { hero: Hero }) {
                 backdropFilter: 'blur(var(--glass-blur))',
               }}
             >
-              {hero.cta_secondary.text}
+              {ctaSecondaryText}
             </Link>
           )}
         </motion.div>

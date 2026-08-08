@@ -35,6 +35,6 @@ components/
 
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
 - **Header.tsx**: يرتبط بـ [  |  |  ]
-- **ad-renderer.tsx**: يرتبط بـ [  |  |  |  ]
+- **ad-renderer.tsx**: يرتبط بـ [  |  |  |  |  ]
 - **offline-banner.tsx**: يرتبط بـ [  |  |  |  ]
 - **service-worker-register.tsx**: يرتبط بـ [  ]

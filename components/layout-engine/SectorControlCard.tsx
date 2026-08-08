@@ -2,7 +2,7 @@
 
 import { motion } from 'motion/react'
 import Link from 'next/link'
-import { Pencil, GripVertical } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { IndicatorBadge } from './IndicatorBadge'
 import { PreviewButton } from './PreviewButton'
@@ -33,18 +33,14 @@ interface SectorControlCardProps {
 export function SectorControlCard({ sector, index, onToggle }: SectorControlCardProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06 }}
       className={cn(
-        'glass-card group relative flex flex-col gap-4 rounded-2xl p-5',
+        'glass-card group flex h-full w-full flex-col gap-4 rounded-2xl p-5',
         !sector.is_active && 'opacity-75'
       )}
     >
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 flex items-center pr-2 pl-1 text-[var(--text-muted)]/40">
-        <GripVertical className="h-4 w-4" />
-      </div>
-
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           <div

@@ -3,12 +3,13 @@
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import type { Project } from '@/lib/sector-types'
 
-interface ProjectsSectionFormProps {
+interface Props {
   data: Project[]
   onChange: (data: Project[]) => void
 }
 
-export function ProjectsSectionForm({ data, onChange }: ProjectsSectionFormProps) {
+export function ProjectsSectionForm({ data, onChange }: Props) {
+  const safeData = data ?? []
   const addProject = () => {
     const newProject: Project = {
       id: `proj-${Date.now()}`,
@@ -19,30 +20,30 @@ export function ProjectsSectionForm({ data, onChange }: ProjectsSectionFormProps
       register_link: '',
       login_link: '',
     }
-    onChange([...data, newProject])
+    onChange([...safeData, newProject])
   }
 
   const removeProject = (id: string) => {
-    onChange(data.filter((p) => p.id !== id))
+    onChange(safeData.filter((p) => p.id !== id))
   }
 
   const updateProject = (id: string, field: keyof Project, value: string | string[]) => {
-    onChange(data.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
+    onChange(safeData.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
   }
 
   const addFeature = (projectId: string) => {
     onChange(
-      data.map((p) =>
-        p.id === projectId ? { ...p, features: [...p.features, ''] } : p
+      safeData.map((p) =>
+        p.id === projectId ? { ...p, features: [...(p.features ?? []), ''] } : p
       )
     )
   }
 
   const updateFeature = (projectId: string, idx: number, value: string) => {
     onChange(
-      data.map((p) =>
+      safeData.map((p) =>
         p.id === projectId
-          ? { ...p, features: p.features.map((f, i) => (i === idx ? value : f)) }
+          ? { ...p, features: (p.features ?? []).map((f, i) => (i === idx ? value : f)) }
           : p
       )
     )
@@ -50,9 +51,9 @@ export function ProjectsSectionForm({ data, onChange }: ProjectsSectionFormProps
 
   const removeFeature = (projectId: string, idx: number) => {
     onChange(
-      data.map((p) =>
+      safeData.map((p) =>
         p.id === projectId
-          ? { ...p, features: p.features.filter((_, i) => i !== idx) }
+          ? { ...p, features: (p.features ?? []).filter((_, i) => i !== idx) }
           : p
       )
     )
@@ -60,7 +61,7 @@ export function ProjectsSectionForm({ data, onChange }: ProjectsSectionFormProps
 
   return (
     <div className="space-y-4">
-      {data.map((project, pi) => (
+      {safeData.map((project, pi) => (
         <div key={project.id} className="glass-card rounded-2xl p-4 space-y-3 relative">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -114,7 +115,7 @@ export function ProjectsSectionForm({ data, onChange }: ProjectsSectionFormProps
               </button>
             </div>
             <div className="space-y-2">
-              {project.features.map((feature, fi) => (
+              { (project.features ?? []).map((feature, fi) => (
                 <div key={fi} className="flex items-center gap-2">
                   <input
                     type="text"

@@ -7,6 +7,7 @@
 - **EditProfileModal.tsx**: يرتبط بـ [  |  |  |  |  |  |  |  |  ]
 - **GlassButton.tsx**: يرتبط بـ [  ]
 - **GlassInput.tsx**: يرتبط بـ [  ]
+- **LogoutFarewell.tsx**: يرتبط بـ [  |  ]
 - **PasswordInput.tsx**: يرتبط بـ [  |  ]
 - **PhoneInput.tsx**: يرتبط بـ [  |  ]
 - **ServiceHeader.tsx**: يرتبط بـ [  |  |  ]

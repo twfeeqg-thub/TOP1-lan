@@ -4,11 +4,14 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { ChevronDown } from 'lucide-react'
 import type { FAQ } from '@/lib/sector-types'
+import { resolveLangText } from '@/lib/i18n-sector'
+import { useApp } from '@/app/providers'
 import { usePsychMessages } from '@/hooks/use-psych-message'
 import { faqOpenMessages } from '@/lib/psych-support'
 
 export default function DynamicFAQ({ faqs }: { faqs: FAQ[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const { lang } = useApp()
 
   const faqMessages = usePsychMessages(faqOpenMessages, faqs.length)
 
@@ -22,6 +25,8 @@ export default function DynamicFAQ({ faqs }: { faqs: FAQ[] }) {
         {faqs.map((faq, idx) => {
           const isOpen = openId === faq.id
           const faqMsg = faqMessages[idx]
+          const question = resolveLangText(faq.question, faq.question_en, lang)
+          const answer = resolveLangText(faq.answer, faq.answer_en, lang)
 
           return (
             <motion.div
@@ -40,7 +45,7 @@ export default function DynamicFAQ({ faqs }: { faqs: FAQ[] }) {
                 aria-expanded={isOpen}
               >
                 <span className="text-sm md:text-base font-semibold leading-relaxed flex-1">
-                  {faq.question}
+                  {question}
                 </span>
                 <motion.div
                   animate={{ rotate: isOpen ? 180 : 0 }}
@@ -73,7 +78,7 @@ export default function DynamicFAQ({ faqs }: { faqs: FAQ[] }) {
                       className="px-5 md:px-6 pb-5 md:pb-6 text-sm leading-relaxed"
                       style={{ color: 'var(--text-muted)' }}
                     >
-                      {faq.answer}
+                      {answer}
                     </div>
                   </motion.div>
                 )}

@@ -3,32 +3,33 @@
 import { Plus, Trash2 } from 'lucide-react'
 import type { Partner } from '@/lib/sector-types'
 
-interface PartnersSectionFormProps {
+interface Props {
   data: Partner[]
   onChange: (data: Partner[]) => void
 }
 
-export function PartnersSectionForm({ data, onChange }: PartnersSectionFormProps) {
+export function PartnersSectionForm({ data, onChange }: Props) {
+  const safeData = data ?? []
   const addPartner = () => {
     const newItem: Partner = {
       id: `part-${Date.now()}`,
       name: '',
       logo: '',
     }
-    onChange([...data, newItem])
+    onChange([...safeData, newItem])
   }
 
   const updatePartner = (id: string, field: keyof Partner, value: string) => {
-    onChange(data.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
+    onChange(safeData.map((p) => (p.id === id ? { ...p, [field]: value } : p)))
   }
 
   const removePartner = (id: string) => {
-    onChange(data.filter((p) => p.id !== id))
+    onChange(safeData.filter((p) => p.id !== id))
   }
 
   return (
     <div className="space-y-4">
-      {data.map((partner, pi) => (
+      {safeData.map((partner, pi) => (
         <div key={partner.id} className="flex items-center gap-3 glass-card rounded-2xl p-3">
           <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input

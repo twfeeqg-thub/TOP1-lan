@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, MousePointerClick, Eye, DollarSign, Plus, Loader2,
   Check, X, AlertTriangle, Skull, Megaphone, Clock, User, CheckCircle2,
+  FileText, Share2, Send,
 } from 'lucide-react'
 import { GlassModal } from '@/components/ui/glass-modal'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
@@ -14,6 +15,7 @@ import { ClientAdRequestModal } from '@/components/ads/client-ad-request-modal'
 import { MasterAdModal, type AdFormData } from '@/components/ads/master-ad-modal'
 import type { Ad, AdRequest, KillSwitchState } from '@/lib/ad-types'
 import { getRandomMessage, loadingMessages, emptyMessages, successMessages } from '@/lib/psych-support'
+import { buildAdsCsv, buildAdsTxt, downloadBlob, waShareUrl, emailShareUrl } from '@/lib/ads-report'
 
 async function fetchRequests(): Promise<{ data: AdRequest[] }> {
   const res = await fetch('/api/master/ads/requests')
@@ -104,6 +106,7 @@ async function toggleKillSwitch() {
 export default function AdsPage() {
   const [clientModalOpen, setClientModalOpen] = useState(false)
   const [masterModalOpen, setMasterModalOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [editingAd, setEditingAd] = useState<Ad | null>(null)
   const [approvingRequest, setApprovingRequest] = useState<AdRequest | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{ id: string; type: 'approved' | 'rejected' } | null>(null)
@@ -135,8 +138,8 @@ export default function AdsPage() {
     queryFn: fetchKillSwitch,
   })
 
-  const requests = requestsData?.data ?? []
-  const ads = adsData?.data ?? []
+  const requests = useMemo(() => requestsData?.data ?? [], [requestsData])
+  const ads = useMemo(() => adsData?.data ?? [], [adsData])
   const killSwitch = ksData?.data
 
   const requestMutation = useMutation({
@@ -226,6 +229,23 @@ export default function AdsPage() {
   const totalClicks = ads.reduce((sum, a) => sum + a.clicks, 0)
   const totalImpressions = ads.reduce((sum, a) => sum + a.impressions, 0)
 
+  const exportReport = useCallback((format: 'csv' | 'txt') => {
+    if (ads.length === 0) return
+    const stamp = new Date().toISOString().slice(0, 10)
+    if (format === 'csv') {
+      downloadBlob(`ads-report-${stamp}.csv`, buildAdsCsv(ads), 'text/csv')
+    } else {
+      downloadBlob(`ads-report-${stamp}.txt`, buildAdsTxt(ads), 'text/plain')
+    }
+  }, [ads])
+
+  const shareReport = useCallback((channel: 'whatsapp' | 'email') => {
+    if (ads.length === 0) return
+    const report = buildAdsTxt(ads)
+    const url = channel === 'whatsapp' ? waShareUrl(report) : emailShareUrl(report)
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }, [ads])
+
   return (
     <div className="space-y-6">
       <AnimatePresence>
@@ -259,6 +279,56 @@ export default function AdsPage() {
             <Megaphone className="w-4 h-4" />
             طلب إعلان (عميل)
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setExportOpen((o) => !o)}
+              disabled={ads.length === 0}
+              className="touch-target min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium glass-card hover:border-[var(--primary)] transition-all disabled:opacity-40"
+            >
+              <FileText className="w-4 h-4" />
+              تصدير التقرير
+            </button>
+            <AnimatePresence>
+              {exportOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+                  className="absolute right-0 top-full z-20 mt-2 w-52 overflow-hidden rounded-2xl glass-card p-1.5 shadow-xl"
+                >
+                  <button
+                    onClick={() => { exportReport('csv'); setExportOpen(false) }}
+                    className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-main)] hover:bg-[var(--sidebar-hover-bg)] transition-colors text-right"
+                  >
+                    <FileText className="w-4 h-4 text-[var(--primary)]" />
+                    تنزيل CSV (Excel)
+                  </button>
+                  <button
+                    onClick={() => { exportReport('txt'); setExportOpen(false) }}
+                    className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-main)] hover:bg-[var(--sidebar-hover-bg)] transition-colors text-right"
+                  >
+                    <FileText className="w-4 h-4 text-[var(--primary)]" />
+                    تنزيل TXT (نصي)
+                  </button>
+                  <button
+                    onClick={() => { shareReport('whatsapp'); setExportOpen(false) }}
+                    className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-main)] hover:bg-[var(--sidebar-hover-bg)] transition-colors text-right"
+                  >
+                    <Share2 className="w-4 h-4 text-emerald-500" />
+                    مشاركة عبر WhatsApp
+                  </button>
+                  <button
+                    onClick={() => { shareReport('email'); setExportOpen(false) }}
+                    className="w-full flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-main)] hover:bg-[var(--sidebar-hover-bg)] transition-colors text-right"
+                  >
+                    <Send className="w-4 h-4 text-sky-500" />
+                    مشاركة عبر الإيميل
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <button

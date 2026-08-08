@@ -4,6 +4,8 @@ import { motion } from 'motion/react'
 import Link from 'next/link'
 import { Sparkles, CheckCircle2, ExternalLink, FileText, Bot, School, Building, BookOpen } from 'lucide-react'
 import type { Project } from '@/lib/sector-types'
+import { resolveLangText } from '@/lib/i18n-sector'
+import { useApp } from '@/app/providers'
 import { usePsychMessages } from '@/hooks/use-psych-message'
 import { encouragementMessages } from '@/lib/psych-support'
 import IconFrame from './IconFrame'
@@ -57,6 +59,7 @@ const iconMap: Record<string, React.ReactNode> = {
 }
 
 export default function DynamicProjects({ projects }: { projects: Project[] }) {
+  const { lang } = useApp()
   const projectMessages = usePsychMessages(encouragementMessages, projects.length)
 
   if (!projects || projects.length === 0) return null
@@ -83,7 +86,11 @@ export default function DynamicProjects({ projects }: { projects: Project[] }) {
         className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-8"
       >
         {projects.map((project, idx) => {
-          const topFeatures = project.features?.slice(0, 3) ?? []
+          const name = resolveLangText(project.name, project.name_en, lang)
+          const description = resolveLangText(project.description, project.description_en, lang)
+          const topFeatures = (project.features ?? [])
+            .slice(0, 3)
+            .map((f, i) => resolveLangText(f, project.features_en?.[i], lang))
           const encouragementMsg = projectMessages[idx]
 
           return (
@@ -103,17 +110,17 @@ export default function DynamicProjects({ projects }: { projects: Project[] }) {
                     className="text-xl md:text-2xl font-bold mb-1"
                     style={{ color: 'var(--text-main)' }}
                   >
-                    {project.name}
+                    {name}
                   </h3>
                 </div>
               </div>
 
-              {project.description && (
+              {description && (
                 <p
                   className="text-sm leading-relaxed mb-3"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  {project.description}
+                  {description}
                 </p>
               )}
 

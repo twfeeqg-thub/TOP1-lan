@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aisahl-static-v1';
+const CACHE_NAME = 'aisahl-static-v2';
 
 const STATIC_ASSETS = [
   '/',
