@@ -1,19 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useOffline } from '@/hooks/use-offline';
+import { useHasHydrated } from '@/hooks/use-local-storage';
 import { motion, AnimatePresence } from 'motion/react';
 import { WifiOff } from 'lucide-react';
 
 export function OfflineBanner() {
   const isOffline = useOffline();
-  const [mounted, setMounted] = useState(false);
+  const hydrated = useHasHydrated();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (!hydrated) return null;
 
   return (
     <AnimatePresence>

@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const { data: user, error: fetchError } = await poolAdmin.client
       .schema('core')
       .from('users')
-      .select('id, phone, name, role, password_hash, push_tokens, is_active')
+      .select('id, phone, name, role, password_hash, push_tokens, is_active, metadata')
       .eq('phone', normalizedPhone)
       .maybeSingle();
 
@@ -83,7 +83,16 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       access_token: accessToken,
-      user: { id: user.id, phone: user.phone, name: user.name, role: user.role },
+      user: {
+        id: user.id,
+        phone: user.phone,
+        name: user.name,
+        role: user.role,
+        tenant_id:
+          user.metadata && typeof user.metadata['tenant_id'] === 'string'
+            ? (user.metadata['tenant_id'] as string)
+            : null,
+      },
       subscriptions,
       redirect_to: redirectTo,
     });

@@ -14,9 +14,9 @@ const highlightIconMap: Record<string, React.ReactNode> = {
 }
 
 export default function DynamicAbout({ about }: { about: About }) {
-  if (!about?.title && !about?.description) return null
-
   const trustMsg = usePsychMessage(trustMessages)
+
+  if (!about?.title && !about?.description) return null
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">

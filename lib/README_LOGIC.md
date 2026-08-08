@@ -1,28 +1,41 @@
 ### المنطق البشري (HUMAN_LOGIC)
-- **supabase-pool.ts**: قلب الربط الخلفي. يكشف `pool` (pg.Pool على `DATABASE_URL` منفذ 6543، `ssl: { rejectUnauthorized: false }`، `max: 10`) ودالة `logAudit()` التي تكتب في `core.master_audit_log`. يُبقي `poolAdmin` (REST عبر Service Role) كما هو. إذا غاب `DATABASE_URL` يكون `pool === null` وتُتخطى الكتابة مع تحذير — لا رمي.
+- **supabase-pool.ts**: قلب الربط الخلفي. يكشف `pool` (pg.Pool على `DATABASE_URL` منفذ 6543، `ssl: { rejectUnauthorized: false }`، `max: 10`) ودالة `logAudit()` التي تكتب في `core.master_audit_log` وتقبل `user_id`, `actor_role`, `performed_at`, `client_mutation_id` وتفرض `severity` على `info/medium/high`. يُبقي `poolAdmin` (REST عبر Service Role) كما هو. إذا غاب `DATABASE_URL` يكون `pool === null` وتُتخطى الكتابة مع تحذير — لا رمي.
 - **auth.ts**: مرجع التشفير والرموز. bcrypt بـ 10 جولات (`SALT_ROUNDS = 10`) موحّدة لكل الحالات (حقن المالك/تسجيل/دخول/تعديل الملف). يوقّع الـ access_token (15 دقيقة) عبر `jsonwebtoken` مع حِمل `role` من نوع `AuthRole` يشمل `super_admin`. يعرّف ثوابت الكوكيز (`REFRESH_COOKIE_NAME/OPTIONS` و `ACCESS_COOKIE_NAME/OPTIONS`).
-- **auth-session.ts**: مستخلص الجلسة الخادمية. `resolveSessionFromRequest()` يقرأ كوكي الـ Refresh HttpOnly → صف جلسة → مستخدم نشط، ويعيد هوية موثوقة لمسارات `session` و `update-profile` دون ثقة بادعاءات العميل.
+- **auth-session.ts**: مستخلص الجلسة الخادمية. `resolveSessionFromRequest()` يقرأ كوكي الـ Refresh HttpOnly → صف جلسة → مستخدم نشط، ويعيد هوية موثوقة لمسارات `session` و `update-profile` دون ثقة بادعاءات العميل. و `resolveMasterActorFromRequest()` (Phase 2) يقرأ الـ access_token الموقَّع (Header أو كوكي المسار `/`) ويتحقق من المستخدم النشط — مصدر الهوية لطفرات لوحة الماستر.
+- **audit-log.ts** (Phase 2): أنواع وأدوات عرض آمنة للعميل — يعرّف `AuditLogEntry` و `AuditSeverity (info/medium/high)` ويحوّل الإجراءات/الأنواع إلى تسميات عربية ويوحّد المستويات القديمة عبر `normalizeSeverity()`.
+- **stats.ts** (Phase 2): خادمي فقط — استعلام CTE واحد عبر `pool` يجمع مؤشرات حقيقية (مستخدمون نشطون، مشاريع، إعلانات، طلبات معلقة، ميزات، تدقيق 24س) في مصفوفة `KpiStat` جاهزة للبطاقات.
+- **kpi-cache.ts** (Phase 2): ذاكرة TTL داخلية (افتراضياً 60 ثانية) مع single-flight — يضمن استعلاماً واحداً أثناء الاندفاع المتزامن ويُبطل بيدوياً عبر `invalidateKpiCache()`.
+- **offline-outbox.ts** (Phase 2): طابور Dexie المحلي — `enqueueMutation()` يبني مفتاح `client_mutation_id` عشوائياً، مع `getPendingMutations/markApplied/markFailed/clearApplied`.
 - **subscriptions.ts**: ثوابت آمنة للعميل فقط (بدون استيراد pg): أنواع الخطط، قوائم مشاريع المنصة التعليمية، وخريطة `APP_SLUG_TO_PROJECT_SLUG` / `APP_SLUG_ROUTES` للعرض الديناميكي.
 - **subscriptions-server.ts**: دوال خادمية فقط (تستورد `supabase-pool`): `fetchUserSubscriptions()` و `ensureSuperAdminSubscriptions()` لضمان اشتراكات المالك `enterprise`.
 - **get-sector-data.ts**: يقرأ `full_data` (JSONB) من `core.sectors` بالـ `slug`. يفصل بين خطأ القاعدة الحقيقي (PostgREST: يُطبع ويُرمى — لا ارتداد وهمي) والفشل الشبكي التام (fetch رمى: يُطبع ويُرتد للموك فقط). عند غياب القطاع يُرجع `{ data: null, isFallback: false }` ليُفعَّل `notFound()`.
-- **sectors-mock-data.ts / ads-mock-data.ts / audit-log-mock-data.ts / supabase.ts (fallbackProjects)**: موك معطّل بلا حذف — لا يُستورد في المسارات أو العرض.
+- **sectors-mock-data.ts / supabase.ts (fallbackProjects)**: موك معطّل بلا حذف — لا يُستورد في المسارات أو العرض. (تم حذف `ads-mock-data.ts` و `audit-log-mock-data.ts` في Phase 2.)
+- **master-tx.ts** (Phase 3): حارس المعاملات الصارمة للوحة الماستر. `withMasterTx(actor, fn)` يفتح اتصالاً مخصصاً من pooler 6543، ينفّذ `BEGIN`، يشغّل كتابة العمل داخل `fn(tx)` ثم يُدرج إدخال `core.master_audit_log` **بنفس المعاملة** ثم `COMMIT` — أي خطأ → `ROLLBACK` كامل بلا حالة جزئية ولا إدخال تدقيق يتيم. يعيد تصدير `resolveMasterActorFromRequest` ويوفر `MasterTxError` (HTTP status) و `dbUnavailable()`.
+- **icons.ts** (Phase 3): سجل الأيقونات الديناميكي لمحرك التخطيط. `resolveIcon(name)` يبحث اسم lucide مخزّناً في القاعدة ويرتد إلى `FolderKanban` عند أي اسم مجهول. يُصدّر `ICON_REGISTRY` و `FALLBACK_ICON` كمراجع ثابتة ليستخدمها العرض كبحث ثابت (آمن لمترجم React) بدلاً من استدعاء ديناميكي.
 
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
 - **ad-types.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
-- **ads-mock-data.ts**: يرتبط بـ [  ]
-- **audit-log-mock-data.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
-- **auth-session.ts**: يرتبط بـ [  |  |  ]
+- **audit-log.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
+- **auth-session.ts**: يرتبط بـ [  |  ]
 - **auth.ts**: يرتبط بـ [  |  ]
+- **client-config.ts**: يرتبط بـ [  |  |  |  |  ]
 - **db.ts**: يرتبط بـ [  ]
 - **exam-db.ts**: يرتبط بـ [  ]
 - **get-sector-data.ts**: يرتبط بـ [  |  ]
+- **icons.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
+- **kpi-cache.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
+- **master-tx.ts**: يرتبط بـ [  |  |  ]
+- **offline-outbox.ts**: يرتبط بـ [  ]
+- **overrides-merge.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
 - **phone.ts**: يرتبط بـ [  ]
 - **psych-support.ts**: يرتبط بـ [  ]
 - **sector-types.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
 - **sectors-mock-data.ts**: يرتبط بـ [  ]
+- **stats.ts**: يرتبط بـ [  ]
 - **subscriptions-server.ts**: يرتبط بـ [  |  ]
 - **subscriptions.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]
 - **supabase-pool.ts**: يرتبط بـ [  |  ]
 - **supabase.ts**: يرتبط بـ [  ]
 - **utils.ts**: يرتبط بـ [  |  ]
-- **validators.ts**: يرتبط بـ [  ]
+- **validators.ts**: يرتبط بـ [  |  ]
+- **workspace-types.ts**: يرتبط بـ [ لا يوجد ارتباطات خارجية ]

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { X, Loader2, Save } from 'lucide-react'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
@@ -49,11 +49,8 @@ const ctaOptions: { value: CtaType; label: string }[] = [
   { value: 'subscribe', label: 'اشتراك' },
 ]
 
-export function MasterAdModal({ open, onClose, onSave, ad, request }: MasterAdModalProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const [form, setForm] = useState<AdFormData>({
+function emptyForm(): AdFormData {
+  return {
     title: '',
     description: '',
     targetUrl: '',
@@ -65,53 +62,61 @@ export function MasterAdModal({ open, onClose, onSave, ad, request }: MasterAdMo
     cta_type: undefined,
     media_url: '',
     status: 'active',
-  })
+  }
+}
 
-  useEffect(() => {
-    if (ad) {
-      setForm({
-        title: ad.ad_config.title,
-        description: ad.ad_config.description,
-        targetUrl: ad.ad_config.targetUrl,
-        placement: ad.ad_config.placement,
-        display_space: ad.ad_config.display_space,
-        lang: ad.ad_config.lang,
-        is_exclusive: ad.ad_config.is_exclusive,
-        is_fixed: ad.ad_config.is_fixed,
-        cta_type: ad.ad_config.cta_type,
-        media_url: ad.media_url || '',
-        status: ad.status,
-      })
-    } else if (request) {
-      setForm({
-        title: request.client_info.business_name,
-        description: request.design_request?.marketing_text || '',
-        targetUrl: '',
-        placement: 'top',
-        display_space: 'Banner',
-        lang: 'ar',
-        is_exclusive: request.campaign.package === 'exclusive',
-        is_fixed: request.campaign.package === 'exclusive',
-        cta_type: request.design_request?.cta_type,
-        media_url: request.attachments.card_url || '',
-        status: 'active',
-      })
-    } else {
-      setForm({
-        title: '',
-        description: '',
-        targetUrl: '',
-        placement: 'top',
-        display_space: 'Banner',
-        lang: 'ar',
-        is_exclusive: false,
-        is_fixed: false,
-        cta_type: undefined,
-        media_url: '',
-        status: 'active',
-      })
-    }
-  }, [ad, request, open])
+function formFromAd(ad: Ad): AdFormData {
+  return {
+    title: ad.ad_config.title,
+    description: ad.ad_config.description,
+    targetUrl: ad.ad_config.targetUrl,
+    placement: ad.ad_config.placement,
+    display_space: ad.ad_config.display_space,
+    lang: ad.ad_config.lang,
+    is_exclusive: ad.ad_config.is_exclusive,
+    is_fixed: ad.ad_config.is_fixed,
+    cta_type: ad.ad_config.cta_type,
+    media_url: ad.media_url || '',
+    status: ad.status,
+  }
+}
+
+function formFromRequest(request: AdRequest): AdFormData {
+  return {
+    title: request.client_info.business_name,
+    description: request.design_request?.marketing_text || '',
+    targetUrl: '',
+    placement: 'top',
+    display_space: 'Banner',
+    lang: 'ar',
+    is_exclusive: request.campaign.package === 'exclusive',
+    is_fixed: request.campaign.package === 'exclusive',
+    cta_type: request.design_request?.cta_type,
+    media_url: request.attachments.card_url || '',
+    status: 'active',
+  }
+}
+
+function initialForm(ad?: Ad | null, request?: AdRequest | null): AdFormData {
+  if (ad) return formFromAd(ad)
+  if (request) return formFromRequest(request)
+  return emptyForm()
+}
+
+interface MasterAdFormProps {
+  onClose: () => void
+  onSave: (data: AdFormData) => Promise<void>
+  ad?: Ad | null
+  request?: AdRequest | null
+}
+
+function MasterAdForm({ onClose, onSave, ad, request }: MasterAdFormProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const [form, setForm] = useState<AdFormData>(() => initialForm(ad, request))
+
+  const isEdit = Boolean(ad)
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -136,7 +141,198 @@ export function MasterAdModal({ open, onClose, onSave, ad, request }: MasterAdMo
     [form, onSave, onClose]
   )
 
+  return (
+    <form onSubmit={handleSubmit} className="p-6 space-y-6">
+      <div className="space-y-4">
+        <h3 className="text-sm font-bold text-[var(--primary)] flex items-center gap-2">
+          <span className="w-1 h-4 rounded-full bg-[var(--primary)]" />
+          محتوى الإعلان
+        </h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">عنوان الإعلان *</label>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              placeholder="مثال: تخفيضات رمضان"
+              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">الوصف *</label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+              placeholder="وصف الإعلان..."
+              rows={3}
+              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">رابط الهدف *</label>
+            <input
+              type="url"
+              value={form.targetUrl}
+              onChange={(e) => setForm((p) => ({ ...p, targetUrl: e.target.value }))}
+              placeholder="https://example.com"
+              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">رابط الوسائط (صورة/فيديو)</label>
+            <input
+              type="url"
+              value={form.media_url || ''}
+              onChange={(e) => setForm((p) => ({ ...p, media_url: e.target.value }))}
+              placeholder="https://example.com/image.webp"
+              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              dir="ltr"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <h3 className="text-sm font-bold text-[var(--primary)] flex items-center gap-2">
+          <span className="w-1 h-4 rounded-full bg-[var(--primary)]" />
+          مفاتيح JSONB - إعدادات العرض
+        </h3>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">مساحة العرض (Display Space)</label>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {displaySpaces.map((ds) => (
+              <button
+                type="button"
+                key={ds.value}
+                onClick={() => setForm((p) => ({ ...p, display_space: ds.value }))}
+                className={cn(
+                  'rounded-xl p-3 text-center border transition-all',
+                  form.display_space === ds.value
+                    ? 'border-[var(--primary)] bg-[var(--primary-light)]'
+                    : 'border-[var(--card-border)] bg-[var(--input-bg)] hover:border-[var(--primary)]/50'
+                )}
+              >
+                <span className="block text-xs font-semibold text-[var(--text-main)]">{ds.label}</span>
+                <span className="block text-[10px] text-[var(--text-muted)] mt-0.5">{ds.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">موضع الصفحة (Placement)</label>
+          <div className="grid grid-cols-3 gap-2">
+            {placements.map((p) => (
+              <button
+                type="button"
+                key={p.value}
+                onClick={() => setForm((prev) => ({ ...prev, placement: p.value }))}
+                className={cn(
+                  'rounded-xl p-2.5 text-center border transition-all text-sm',
+                  form.placement === p.value
+                    ? 'border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]'
+                    : 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-[var(--primary)]/50'
+                )}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">اللغة</label>
+            <select
+              value={form.lang}
+              onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value as AdLang }))}
+              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
+            >
+              <option value="ar">العربية</option>
+              <option value="en">English</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">نوع CTA</label>
+            <select
+              value={form.cta_type || ''}
+              onChange={(e) => setForm((p) => ({ ...p, cta_type: (e.target.value || undefined) as CtaType | undefined }))}
+              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
+            >
+              <option value="">بدون CTA</option>
+              {ctaOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--sidebar-border)] pt-4 space-y-4">
+          <h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider">التحكم في الظهور</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ToggleSwitch
+              checked={form.is_exclusive}
+              onChange={(checked) => setForm((p) => ({ ...p, is_exclusive: checked }))}
+              label="حصرية الظهور (is_exclusive)"
+            />
+            <ToggleSwitch
+              checked={form.is_fixed}
+              onChange={(checked) => setForm((p) => ({ ...p, is_fixed: checked }))}
+              label="تثبيت بصري (is_fixed)"
+            />
+          </div>
+          {form.is_exclusive && (
+            <p className="text-xs text-amber-400">
+              تنبيه: الإعلان الحصري يكسر طابور العرض وسيظهر بشكل منفرد.
+            </p>
+          )}
+        </div>
+
+        <div className="border-t border-[var(--sidebar-border)] pt-4">
+          <div className="flex items-center gap-3">
+            <label className="block text-sm font-medium text-[var(--text-muted)]">حالة الإعلان</label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as 'active' | 'inactive' }))}
+              className="glass-input rounded-xl px-3 py-1.5 text-sm outline-none appearance-none"
+            >
+              <option value="active">نشط</option>
+              <option value="inactive">متوقف</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-rose-400">{error}</p>}
+
+      <div className="flex gap-3 pt-2">
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+        >
+          إلغاء
+        </button>
+        <button
+          type="submit"
+          disabled={loading}
+          className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+          <Save className="w-4 h-4" />
+          {loading ? 'جاري الحفظ...' : isEdit ? 'تحديث الإعلان' : 'نشر الإعلان'}
+        </button>
+      </div>
+    </form>
+  )
+}
+
+export function MasterAdModal({ open, onClose, onSave, ad, request }: MasterAdModalProps) {
   const isEdit = Boolean(ad)
+  const formKey = `${open}-${ad?.id ?? ''}-${request?.id ?? ''}`
 
   return (
     <AnimatePresence>
@@ -179,191 +375,7 @@ export function MasterAdModal({ open, onClose, onSave, ad, request }: MasterAdMo
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold text-[var(--primary)] flex items-center gap-2">
-                  <span className="w-1 h-4 rounded-full bg-[var(--primary)]" />
-                  محتوى الإعلان
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">عنوان الإعلان *</label>
-                    <input
-                      type="text"
-                      value={form.title}
-                      onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
-                      placeholder="مثال: تخفيضات رمضان"
-                      className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">الوصف *</label>
-                    <textarea
-                      value={form.description}
-                      onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
-                      placeholder="وصف الإعلان..."
-                      rows={3}
-                      className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">رابط الهدف *</label>
-                    <input
-                      type="url"
-                      value={form.targetUrl}
-                      onChange={(e) => setForm((p) => ({ ...p, targetUrl: e.target.value }))}
-                      placeholder="https://example.com"
-                      className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-                      dir="ltr"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">رابط الوسائط (صورة/فيديو)</label>
-                    <input
-                      type="url"
-                      value={form.media_url || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, media_url: e.target.value }))}
-                      placeholder="https://example.com/image.webp"
-                      className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
-                      dir="ltr"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold text-[var(--primary)] flex items-center gap-2">
-                  <span className="w-1 h-4 rounded-full bg-[var(--primary)]" />
-                  مفاتيح JSONB - إعدادات العرض
-                </h3>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">مساحة العرض (Display Space)</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {displaySpaces.map((ds) => (
-                      <button
-                        type="button"
-                        key={ds.value}
-                        onClick={() => setForm((p) => ({ ...p, display_space: ds.value }))}
-                        className={cn(
-                          'rounded-xl p-3 text-center border transition-all',
-                          form.display_space === ds.value
-                            ? 'border-[var(--primary)] bg-[var(--primary-light)]'
-                            : 'border-[var(--card-border)] bg-[var(--input-bg)] hover:border-[var(--primary)]/50'
-                        )}
-                      >
-                        <span className="block text-xs font-semibold text-[var(--text-main)]">{ds.label}</span>
-                        <span className="block text-[10px] text-[var(--text-muted)] mt-0.5">{ds.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--text-muted)] mb-2">موضع الصفحة (Placement)</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {placements.map((p) => (
-                      <button
-                        type="button"
-                        key={p.value}
-                        onClick={() => setForm((prev) => ({ ...prev, placement: p.value }))}
-                        className={cn(
-                          'rounded-xl p-2.5 text-center border transition-all text-sm',
-                          form.placement === p.value
-                            ? 'border-[var(--primary)] bg-[var(--primary-light)] text-[var(--primary)]'
-                            : 'border-[var(--card-border)] bg-[var(--input-bg)] text-[var(--text-muted)] hover:border-[var(--primary)]/50'
-                        )}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">اللغة</label>
-                    <select
-                      value={form.lang}
-                      onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value as AdLang }))}
-                      className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
-                    >
-                      <option value="ar">العربية</option>
-                      <option value="en">English</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--text-muted)] mb-1.5">نوع CTA</label>
-                    <select
-                      value={form.cta_type || ''}
-                      onChange={(e) => setForm((p) => ({ ...p, cta_type: (e.target.value || undefined) as CtaType | undefined }))}
-                      className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
-                    >
-                      <option value="">بدون CTA</option>
-                      {ctaOptions.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="border-t border-[var(--sidebar-border)] pt-4 space-y-4">
-                  <h4 className="text-xs font-semibold text-[var(--text-muted)] tracking-wider">التحكم في الظهور</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <ToggleSwitch
-                      checked={form.is_exclusive}
-                      onChange={(checked) => setForm((p) => ({ ...p, is_exclusive: checked }))}
-                      label="حصرية الظهور (is_exclusive)"
-                    />
-                    <ToggleSwitch
-                      checked={form.is_fixed}
-                      onChange={(checked) => setForm((p) => ({ ...p, is_fixed: checked }))}
-                      label="تثبيت بصري (is_fixed)"
-                    />
-                  </div>
-                  {form.is_exclusive && (
-                    <p className="text-xs text-amber-400">
-                      تنبيه: الإعلان الحصري يكسر طابور العرض وسيظهر بشكل منفرد.
-                    </p>
-                  )}
-                </div>
-
-                <div className="border-t border-[var(--sidebar-border)] pt-4">
-                  <div className="flex items-center gap-3">
-                    <label className="block text-sm font-medium text-[var(--text-muted)]">حالة الإعلان</label>
-                    <select
-                      value={form.status}
-                      onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as 'active' | 'inactive' }))}
-                      className="glass-input rounded-xl px-3 py-1.5 text-sm outline-none appearance-none"
-                    >
-                      <option value="active">نشط</option>
-                      <option value="inactive">متوقف</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {error && <p className="text-sm text-rose-400">{error}</p>}
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <Save className="w-4 h-4" />
-                  {loading ? 'جاري الحفظ...' : isEdit ? 'تحديث الإعلان' : 'نشر الإعلان'}
-                </button>
-              </div>
-            </form>
+            <MasterAdForm key={formKey} onClose={onClose} onSave={onSave} ad={ad} request={request} />
           </motion.div>
         </div>
       )}

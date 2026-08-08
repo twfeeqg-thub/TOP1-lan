@@ -87,6 +87,7 @@ export const Ad_Renderer_Component = ({
 }) => {
   const [killSwitchActive, setKillSwitchActive] = useState(false)
   const [killSwitchLoaded, setKillSwitchLoaded] = useState(false)
+  const [mediaFailed, setMediaFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -175,7 +176,7 @@ export const Ad_Renderer_Component = ({
           {isSlider && (
             <button
               onClick={goPrev}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg hover:bg-white/20 transition-all cursor-pointer"
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg hover:bg-white/20 transition-all cursor-pointer touch-target"
               aria-label={lang === 'ar' ? 'السابق' : 'Previous'}
             >
               <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
@@ -185,7 +186,7 @@ export const Ad_Renderer_Component = ({
           {isSlider && (
             <button
               onClick={goNext}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg hover:bg-white/20 transition-all cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full bg-white/10 backdrop-blur-md border border-white/20 shadow-lg hover:bg-white/20 transition-all cursor-pointer touch-target"
               aria-label={lang === 'ar' ? 'التالي' : 'Next'}
             >
               <ChevronRight className="w-5 h-5 text-slate-700 dark:text-slate-200" />
@@ -195,14 +196,18 @@ export const Ad_Renderer_Component = ({
           <span className="absolute top-2 left-3 text-[9px] uppercase tracking-wider text-slate-400/80 bg-slate-500/10 px-2 py-0.5 rounded border border-slate-500/10">
             {lang === 'ar' ? 'مساحة إعلانية مدمجة' : 'Central Ad Node'}
           </span>
-          {hasMedia && (
-            <div className="relative shrink-0 w-full md:w-48 h-32 rounded-xl overflow-hidden">
+          {hasMedia && !mediaFailed && (
+            <div className="relative shrink-0 w-full md:w-48 aspect-[2/1] rounded-xl overflow-hidden bg-[var(--sidebar-hover-bg)]">
               <Image
                 src={mediaUrl!}
                 alt={cfg?.title ?? ''}
                 fill
+                sizes="(max-width: 768px) 100vw, 192px"
+                loading="lazy"
+                decoding="async"
                 className="object-cover"
                 unoptimized
+                onError={() => setMediaFailed(true)}
               />
             </div>
           )}

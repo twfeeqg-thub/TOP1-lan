@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { motion } from 'motion/react'
+import { useState, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, FolderKanban, CheckCircle2 } from 'lucide-react'
 import { GlassModal } from '@/components/ui/glass-modal'
 import { cn } from '@/lib/utils'
+import { useOutbox } from '@/hooks/use-outbox'
+import { getRandomMessage, loadingMessages, emptyMessages, successMessages } from '@/lib/psych-support'
 
 interface Project {
   id: string
@@ -46,13 +48,40 @@ async function createProject(data: {
   return res.json()
 }
 
-const sectors = ['التعليم', 'الصحة', 'العقارات', 'التجارة', 'الزراعة', 'السياحة']
+interface Sector {
+  id: string
+  name: string
+  slug: string
+  is_active: boolean
+}
+
+async function fetchSectors(): Promise<{ data: Sector[] }> {
+  const res = await fetch('/api/master/sectors')
+  if (!res.ok) throw new Error('Failed to fetch sectors')
+  return res.json()
+}
 
 export default function ProjectsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ name: '', slug: '', sector_name: '', modules_config: '' })
   const [error, setError] = useState('')
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
   const queryClient = useQueryClient()
+  const { enqueueMutation } = useOutbox()
+
+  const loadingMsg = useMemo(() => getRandomMessage(loadingMessages), [])
+  const emptyMsg = useMemo(() => getRandomMessage(emptyMessages), [])
+
+  const flashSuccess = useCallback((msg: string) => {
+    setSuccessMsg(msg)
+    window.setTimeout(() => setSuccessMsg(null), 2500)
+  }, [])
+
+  const { data: sectorsData } = useQuery({
+    queryKey: ['master-sectors'],
+    queryFn: fetchSectors,
+  })
+  const sectors = (sectorsData?.data ?? []).filter((s) => s.is_active)
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['master-projects'],
@@ -66,6 +95,7 @@ export default function ProjectsPage() {
       setModalOpen(false)
       setForm({ name: '', slug: '', sector_name: '', modules_config: '' })
       setError('')
+      flashSuccess(getRandomMessage(successMessages))
     },
     onError: (err: Error) => {
       setError(err.message)
@@ -91,9 +121,29 @@ export default function ProjectsPage() {
         }
       }
 
+      const offline = typeof navigator !== 'undefined' && !navigator.onLine
+      if (offline) {
+        enqueueMutation({
+          action: 'project.upsert',
+          entity_type: 'project',
+          entity_id: form.slug,
+          payload: {
+            slug: form.slug,
+            sector_name: form.sector_name,
+            modules_config: parsedConfig,
+          },
+        }).then(() => {
+          setModalOpen(false)
+          setForm({ name: '', slug: '', sector_name: '', modules_config: '' })
+          setError('')
+          flashSuccess(getRandomMessage(successMessages))
+        })
+        return
+      }
+
       mutation.mutate(form)
     },
-    [form, mutation]
+    [form, mutation, enqueueMutation, flashSuccess]
   )
 
   const handleNameChange = useCallback(
@@ -122,16 +172,32 @@ export default function ProjectsPage() {
         <div />
         <button
           onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all shadow-lg shadow-[var(--glow-color)]"
+          className="touch-target flex min-h-[44px] items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all shadow-lg shadow-[var(--glow-color)]"
         >
           <Plus className="w-4 h-4" />
           إضافة مشروع جديد
         </button>
       </div>
 
+      <AnimatePresence>
+        {successMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="glassy-toast flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium text-[var(--text-main)]"
+          >
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+            <span className="truncate">{successMsg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {isLoading && (
-        <div className="flex justify-center py-12">
+        <div className="flex flex-col items-center justify-center gap-3 py-14">
           <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
+          <p className="text-sm text-[var(--text-muted)]">{loadingMsg}</p>
         </div>
       )}
 
@@ -142,24 +208,31 @@ export default function ProjectsPage() {
       )}
 
       {!isLoading && !isError && projects.length === 0 && (
-        <div className="glass-card rounded-2xl p-8 text-center">
-          <p className="text-[var(--text-muted)]">لا توجد مشاريع بعد</p>
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+          className="glass-edge rounded-2xl p-10 text-center"
+        >
+          <FolderKanban className="w-10 h-10 mx-auto mb-3 text-[var(--primary)]/60" />
+          <p className="text-base font-bold text-[var(--text-main)]">{emptyMsg}</p>
           <button
             onClick={() => setModalOpen(true)}
-            className="mt-3 text-sm text-[var(--primary)] hover:underline"
+            className="touch-target min-h-[44px] mt-4 text-sm text-[var(--primary)] hover:underline"
           >
             إضافة أول مشروع
           </button>
-        </div>
+        </motion.div>
       )}
 
       {!isLoading && !isError && projects.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 15 }}
           className="glass-card rounded-2xl overflow-hidden"
         >
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--sidebar-border)]">
@@ -176,7 +249,7 @@ export default function ProjectsPage() {
                     key={p.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
                     className="border-b border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover-bg)] transition-colors"
                   >
                     <td className="px-5 py-4">
@@ -191,12 +264,13 @@ export default function ProjectsPage() {
                     <td className="px-5 py-4">
                       <span
                         className={cn(
-                          'text-xs px-2.5 py-1 rounded-full',
+                          'pill',
                           p.is_active
-                            ? 'bg-[var(--primary-light)] text-[var(--primary)]'
-                            : 'bg-rose-500/10 text-rose-400'
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-amber-500/10 text-amber-500'
                         )}
                       >
+                        <span className={cn('status-dot', p.is_active ? 'status-dot-active' : 'status-dot-paused')} />
                         {p.is_active ? 'نشط' : 'متوقف'}
                       </span>
                     </td>
@@ -207,6 +281,42 @@ export default function ProjectsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="md:hidden grid grid-cols-1 gap-3 p-4">
+            {projects.map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
+                whileTap={{ scale: 0.99 }}
+                className="glass-edge rounded-xl p-4 space-y-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[var(--text-main)] truncate">{p.name}</p>
+                    <code className="text-xs text-[var(--text-muted)] bg-[var(--sidebar-hover-bg)] px-2 py-0.5 rounded mt-1 inline-block" dir="ltr">
+                      {p.slug}
+                    </code>
+                  </div>
+                  <span
+                    className={cn(
+                      'pill shrink-0',
+                      p.is_active
+                        ? 'bg-emerald-500/10 text-emerald-500'
+                        : 'bg-amber-500/10 text-amber-500'
+                    )}
+                  >
+                    <span className={cn('status-dot', p.is_active ? 'status-dot-active' : 'status-dot-paused')} />
+                    {p.is_active ? 'نشط' : 'متوقف'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                  <span>{p.sector_name}</span>
+                  <span>{new Date(p.created_at).toLocaleDateString('ar-SA')}</span>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
       )}
@@ -220,7 +330,7 @@ export default function ProjectsPage() {
               value={form.name}
               onChange={handleNameChange}
               placeholder="مثال: المنصة التعليمية"
-              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none"
+              className="glass-input touch-target min-h-[44px] w-full rounded-xl px-4 py-2.5 text-sm outline-none"
             />
           </div>
           <div>
@@ -230,7 +340,7 @@ export default function ProjectsPage() {
               value={form.slug}
               onChange={(e) => setForm((p) => ({ ...p, slug: e.target.value }))}
               placeholder="مثال: edu-platform"
-              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none font-mono"
+              className="glass-input touch-target min-h-[44px] w-full rounded-xl px-4 py-2.5 text-sm outline-none font-mono"
               dir="ltr"
             />
           </div>
@@ -239,12 +349,12 @@ export default function ProjectsPage() {
             <select
               value={form.sector_name}
               onChange={(e) => setForm((p) => ({ ...p, sector_name: e.target.value }))}
-              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
+              className="glass-input touch-target min-h-[44px] w-full rounded-xl px-4 py-2.5 text-sm outline-none appearance-none"
             >
               <option value="">اختر القطاع</option>
               {sectors.map((s) => (
-                <option key={s} value={s}>
-                  {s}
+                <option key={s.id} value={s.name}>
+                  {s.name}
                 </option>
               ))}
             </select>
@@ -258,7 +368,7 @@ export default function ProjectsPage() {
               onChange={(e) => setForm((p) => ({ ...p, modules_config: e.target.value }))}
               placeholder='{"version": "2.0", "features": ["analytics", "reports"]}'
               rows={4}
-              className="glass-input w-full rounded-xl px-4 py-2.5 text-sm outline-none font-mono resize-none"
+              className="glass-input touch-target min-h-[44px] w-full rounded-xl px-4 py-2.5 text-sm outline-none font-mono resize-none"
               dir="ltr"
             />
           </div>
@@ -267,14 +377,14 @@ export default function ProjectsPage() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+              className="touch-target min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
             >
               إلغاء
             </button>
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="touch-target min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
               {mutation.isPending ? 'جاري الحفظ...' : 'حفظ المشروع'}

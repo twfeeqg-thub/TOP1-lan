@@ -1,27 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
+import { useHasHydrated, useLocalStorageValue } from '@/hooks/use-local-storage'
 
 const DISMISS_KEY = 'fallback-banner-dismissed'
 const DISMISS_DURATION = 5 * 60 * 1000
 
-export default function FallbackBanner() {
-  const [visible, setVisible] = useState(false)
+function isDismissed(dismissedAt: string | null): boolean {
+  if (!dismissedAt) return false
+  return Date.now() - Number(dismissedAt) < DISMISS_DURATION
+}
 
-  useEffect(() => {
-    const dismissedAt = localStorage.getItem(DISMISS_KEY)
-    if (dismissedAt) {
-      const elapsed = Date.now() - Number(dismissedAt)
-      if (elapsed < DISMISS_DURATION) return
-      localStorage.removeItem(DISMISS_KEY)
-    }
-    setVisible(true)
-  }, [])
+export default function FallbackBanner() {
+  const hydrated = useHasHydrated()
+  const [dismissedAt, setDismissedAt] = useLocalStorageValue<string | null>(DISMISS_KEY, {
+    fallback: null,
+    read: (raw) => raw,
+    serialize: (value) => value ?? '',
+  })
+
+  const visible = hydrated && !isDismissed(dismissedAt)
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISS_KEY, String(Date.now()))
-    setVisible(false)
+    setDismissedAt(String(Date.now()))
   }
 
   if (!visible) return null

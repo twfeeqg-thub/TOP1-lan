@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { motion } from 'motion/react'
+import { useState, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, MousePointerClick, Eye, DollarSign, Plus, Loader2,
-  Check, X, AlertTriangle, Skull, Megaphone, Clock, User,
+  Check, X, AlertTriangle, Skull, Megaphone, Clock, User, CheckCircle2,
 } from 'lucide-react'
 import { GlassModal } from '@/components/ui/glass-modal'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { ClientAdRequestModal } from '@/components/ads/client-ad-request-modal'
 import { MasterAdModal, type AdFormData } from '@/components/ads/master-ad-modal'
 import type { Ad, AdRequest, KillSwitchState } from '@/lib/ad-types'
+import { getRandomMessage, loadingMessages, emptyMessages, successMessages } from '@/lib/psych-support'
 
 async function fetchRequests(): Promise<{ data: AdRequest[] }> {
   const res = await fetch('/api/master/ads/requests')
@@ -106,8 +107,18 @@ export default function AdsPage() {
   const [editingAd, setEditingAd] = useState<Ad | null>(null)
   const [approvingRequest, setApprovingRequest] = useState<AdRequest | null>(null)
   const [confirmDialog, setConfirmDialog] = useState<{ id: string; type: 'approved' | 'rejected' } | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+
+  const adsLoadingMsg = useMemo(() => getRandomMessage(loadingMessages), [])
+  const emptyAdsMsg = useMemo(() => getRandomMessage(emptyMessages), [])
+  const emptyReqMsg = useMemo(() => getRandomMessage(emptyMessages), [])
 
   const queryClient = useQueryClient()
+
+  const flashSuccess = useCallback((msg: string) => {
+    setSuccessMsg(msg)
+    window.setTimeout(() => setSuccessMsg(null), 2500)
+  }, [])
 
   const { data: requestsData, isLoading: requestsLoading } = useQuery({
     queryKey: ['master-ad-requests'],
@@ -135,6 +146,7 @@ export default function AdsPage() {
       queryClient.invalidateQueries({ queryKey: ['master-ad-requests'] })
       queryClient.invalidateQueries({ queryKey: ['master-ads'] })
       setConfirmDialog(null)
+      flashSuccess(getRandomMessage(successMessages))
     },
   })
 
@@ -145,6 +157,7 @@ export default function AdsPage() {
       queryClient.invalidateQueries({ queryKey: ['master-ad-requests'] })
       setMasterModalOpen(false)
       setApprovingRequest(null)
+      flashSuccess(getRandomMessage(successMessages))
     },
   })
 
@@ -154,6 +167,7 @@ export default function AdsPage() {
       queryClient.invalidateQueries({ queryKey: ['master-ads'] })
       setMasterModalOpen(false)
       setEditingAd(null)
+      flashSuccess(getRandomMessage(successMessages))
     },
   })
 
@@ -214,18 +228,33 @@ export default function AdsPage() {
 
   return (
     <div className="space-y-6">
+      <AnimatePresence>
+        {successMsg && (
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 24 }}
+            className="glassy-toast flex items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-medium text-[var(--text-main)]"
+          >
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+            <span className="truncate">{successMsg}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <button
             onClick={openNewAd}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all shadow-lg shadow-[var(--glow-color)]"
+            className="touch-target min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all shadow-lg shadow-[var(--glow-color)]"
           >
             <Plus className="w-4 h-4" />
             إضافة إعلان
           </button>
           <button
             onClick={() => setClientModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium glass-card hover:border-[var(--primary)] transition-all"
+            className="touch-target min-h-[44px] flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium glass-card hover:border-[var(--primary)] transition-all"
           >
             <Megaphone className="w-4 h-4" />
             طلب إعلان (عميل)
@@ -236,7 +265,7 @@ export default function AdsPage() {
           onClick={() => killSwitchMutation.mutate()}
           disabled={killSwitchMutation.isPending}
           className={cn(
-            'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
+            'touch-target min-h-[44px] flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
             killSwitch?.active
               ? 'bg-rose-600 text-white hover:bg-rose-700 shadow-rose-500/30'
               : 'glass-card text-[var(--text-main)] hover:border-rose-400'
@@ -262,7 +291,7 @@ export default function AdsPage() {
             key={item.label}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
+            transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.06 }}
             className="glass-card rounded-2xl p-5"
           >
             <div className="w-9 h-9 rounded-xl bg-[var(--primary-light)] flex items-center justify-center mb-3">
@@ -278,7 +307,7 @@ export default function AdsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+          transition={{ type: 'spring', stiffness: 100, damping: 15, delay: 0.1 }}
           className="glass-card rounded-2xl overflow-hidden"
         >
           <div className="px-5 py-4 border-b border-[var(--sidebar-border)] flex items-center gap-2">
@@ -288,7 +317,7 @@ export default function AdsPage() {
               {pendingRequests.length}
             </span>
           </div>
-          <div className="overflow-x-auto">
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--sidebar-border)]">
@@ -306,7 +335,7 @@ export default function AdsPage() {
                     key={req.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
                     className="border-b border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover-bg)] transition-colors"
                   >
                     <td className="px-5 py-3">
@@ -356,13 +385,63 @@ export default function AdsPage() {
               </tbody>
             </table>
           </div>
+          <div className="md:hidden grid grid-cols-1 gap-3 p-4">
+            {pendingRequests.map((req, i) => (
+              <motion.div
+                key={req.id}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
+                whileTap={{ scale: 0.99 }}
+                className="glass-edge rounded-xl p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-[var(--text-main)] truncate">{req.client_info.business_name}</p>
+                    <p className="text-xs text-[var(--text-muted)] mt-0.5" dir="ltr">{req.client_info.whatsapp}</p>
+                  </div>
+                  <span className={cn(
+                    'pill shrink-0',
+                    req.campaign.package === 'exclusive' ? 'bg-purple-500/10 text-purple-400' :
+                    req.campaign.package === 'video' ? 'bg-cyan-500/10 text-cyan-400' :
+                    'bg-slate-500/10 text-slate-400'
+                  )}>
+                    <span className={cn('status-dot', req.campaign.package === 'exclusive' ? 'status-dot-paused' : req.campaign.package === 'video' ? 'status-dot-active' : 'status-dot-paused')} />
+                    {req.campaign.package === 'exclusive' ? 'حصري' : req.campaign.package === 'video' ? 'فيديو' : 'قياسي'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
+                  <span>{req.client_info.target_sector}</span>
+                  <span>{new Date(req.created_at).toLocaleDateString('ar-SA')}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleApproveRequest(req)}
+                    disabled={requestMutation.isPending}
+                    className="touch-target flex-1 flex items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all disabled:opacity-50 text-sm font-medium"
+                  >
+                    <Check className="w-4 h-4" />
+                    موافقة
+                  </button>
+                  <button
+                    onClick={() => handleRejectRequest(req.id)}
+                    disabled={requestMutation.isPending}
+                    className="touch-target flex-1 flex items-center justify-center gap-1.5 min-h-[44px] rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-all disabled:opacity-50 text-sm font-medium"
+                  >
+                    <X className="w-4 h-4" />
+                    رفض
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ type: 'spring', stiffness: 100, damping: 15, delay: 0.2 }}
         className="glass-card rounded-2xl overflow-hidden"
       >
         <div className="px-5 py-4 border-b border-[var(--sidebar-border)] flex items-center gap-2">
@@ -374,17 +453,19 @@ export default function AdsPage() {
         </div>
 
         {adsLoading && (
-          <div className="flex justify-center py-12">
+          <div className="flex flex-col items-center justify-center gap-3 py-14">
             <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
+            <p className="text-sm text-[var(--text-muted)]">{adsLoadingMsg}</p>
           </div>
         )}
 
         {!adsLoading && ads.length === 0 && (
-          <div className="p-8 text-center">
-            <p className="text-[var(--text-muted)]">لا توجد إعلانات بعد</p>
+          <div className="p-10 text-center">
+            <Megaphone className="w-10 h-10 mx-auto mb-3 text-[var(--primary)]/60" />
+            <p className="text-base font-bold text-[var(--text-main)]">{emptyAdsMsg}</p>
             <button
               onClick={openNewAd}
-              className="mt-3 text-sm text-[var(--primary)] hover:underline"
+              className="touch-target min-h-[44px] mt-4 text-sm text-[var(--primary)] hover:underline"
             >
               إضافة أول إعلان
             </button>
@@ -392,8 +473,9 @@ export default function AdsPage() {
         )}
 
         {!adsLoading && ads.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full">
               <thead>
                 <tr className="border-b border-[var(--sidebar-border)]">
                   <th className="text-right px-5 py-4 text-xs font-medium text-[var(--text-muted)] tracking-wider">الإعلان</th>
@@ -412,7 +494,7 @@ export default function AdsPage() {
                     key={ad.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
+                    transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
                     className="border-b border-[var(--sidebar-border)] hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-pointer"
                     onClick={() => openEditAd(ad)}
                   >
@@ -445,18 +527,19 @@ export default function AdsPage() {
                     </td>
                     <td className="px-5 py-4">
                       <span className={cn(
-                        'text-xs px-2.5 py-1 rounded-full',
+                        'pill',
                         ad.status === 'active'
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-amber-500/10 text-amber-400'
+                          ? 'bg-emerald-500/10 text-emerald-500'
+                          : 'bg-amber-500/10 text-amber-500'
                       )}>
+                        <span className={cn('status-dot', ad.status === 'active' ? 'status-dot-active' : 'status-dot-paused')} />
                         {ad.status === 'active' ? 'نشط' : 'متوقف'}
                       </span>
                     </td>
                     <td className="px-5 py-4 text-center">
                       <button
                         onClick={(e) => { e.stopPropagation(); openEditAd(ad); }}
-                        className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+                        className="p-1.5 min-h-[44px] min-w-[44px] touch-target rounded-lg text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
                       >
                         <span className="text-xs">تحرير</span>
                       </button>
@@ -465,7 +548,54 @@ export default function AdsPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <div className="md:hidden grid grid-cols-1 gap-3 p-4">
+              {ads.map((ad, i) => (
+                <motion.div
+                  key={ad.id}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => openEditAd(ad)}
+                  className="glass-edge rounded-xl p-4 space-y-3 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[var(--text-main)] truncate">{ad.ad_config.title}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate mt-0.5">{ad.ad_config.description}</p>
+                    </div>
+                    <span className={cn(
+                      'pill shrink-0',
+                      ad.status === 'active'
+                        ? 'bg-emerald-500/10 text-emerald-500'
+                        : 'bg-amber-500/10 text-amber-500'
+                    )}>
+                      <span className={cn('status-dot', ad.status === 'active' ? 'status-dot-active' : 'status-dot-paused')} />
+                      {ad.status === 'active' ? 'نشط' : 'متوقف'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <span className="px-2 py-0.5 rounded-full bg-[var(--sidebar-hover-bg)]">{ad.ad_config.display_space}</span>
+                    {ad.ad_config.is_exclusive && (
+                      <span className="px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400">حصري</span>
+                    )}
+                    {ad.ad_config.is_fixed && (
+                      <span className="px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400">مثبّت</span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <MousePointerClick className="w-3.5 h-3.5" />
+                      {ad.clicks.toLocaleString()}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-3.5 h-3.5" />
+                      {ad.impressions.toLocaleString()}
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
         )}
       </motion.div>
 
@@ -499,7 +629,7 @@ export default function AdsPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setConfirmDialog(null)}
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+              className="touch-target min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
             >
               إلغاء
             </button>
@@ -507,7 +637,7 @@ export default function AdsPage() {
               onClick={handleConfirmAction}
               disabled={requestMutation.isPending}
               className={cn(
-                'flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2',
+                'touch-target min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2',
                 confirmDialog?.type === 'rejected'
                   ? 'bg-rose-600 hover:bg-rose-700'
                   : 'bg-[var(--primary)] hover:bg-[var(--primary-hover)]'

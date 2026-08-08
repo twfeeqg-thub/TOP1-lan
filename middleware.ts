@@ -13,18 +13,18 @@ export async function middleware(request: NextRequest) {
 
   // The login page itself must be reachable without a token, otherwise
   // unauthenticated visitors get stuck in a redirect loop.
-  if (request.nextUrl.pathname === '/master/login') {
+  if (request.nextUrl.pathname === '/master/login' || request.nextUrl.pathname === '/login') {
     return NextResponse.next()
   }
 
   const token = extractToken(request)
   if (!token) {
-    return redirectToLogin(request)
+    return unauthorizedResponse(request)
   }
 
   const isValid = await verifyToken(token)
   if (!isValid) {
-    return redirectToLogin(request)
+    return unauthorizedResponse(request)
   }
 
   return NextResponse.next()
@@ -54,7 +54,24 @@ async function verifyToken(token: string): Promise<boolean> {
   }
 }
 
-function redirectToLogin(request: NextRequest) {
+/**
+ * Yes/No response per surface:
+ *  - `/api/client/*` → clean 401 JSON (fetch-friendly, no HTML leak).
+ *  - `/client/*`     → redirect to the unified login with the client service
+ *                      marker so the user can authenticate and come back.
+ *  - everything else (master) → legacy `/master/login` redirect.
+ */
+function unauthorizedResponse(request: NextRequest) {
+  const path = request.nextUrl.pathname
+
+  if (path.startsWith('/api/')) {
+    return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+  }
+
+  if (path.startsWith('/client')) {
+    return NextResponse.redirect(new URL('/login?service=client', request.url))
+  }
+
   const loginUrl = new URL('/master/login', request.url)
   return NextResponse.redirect(loginUrl)
 }
@@ -63,5 +80,7 @@ export const config = {
   matcher: [
     '/master/:path*',
     '/api/master/:path*',
+    '/client/:path*',
+    '/api/client/:path*',
   ],
 }

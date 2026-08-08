@@ -57,9 +57,9 @@ const iconMap: Record<string, React.ReactNode> = {
 }
 
 export default function DynamicProjects({ projects }: { projects: Project[] }) {
-  if (!projects || projects.length === 0) return null
-
   const projectMessages = usePsychMessages(encouragementMessages, projects.length)
+
+  if (!projects || projects.length === 0) return null
 
   const containerVariants = {
     hidden: {},

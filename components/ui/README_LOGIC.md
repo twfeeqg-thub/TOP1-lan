@@ -3,4 +3,5 @@
 
 ### 🕸️ الهيكل الآلي والارتباطات (AUTO_STRUCTURE)
 - **glass-modal.tsx**: يرتبط بـ [  |  |  |  ]
+- **sovereign-icon.tsx**: يرتبط بـ [  |  ]
 - **toggle-switch.tsx**: يرتبط بـ [  ]

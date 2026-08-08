@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { pool, logAudit } from '@/lib/supabase-pool'
+import { pool } from '@/lib/supabase-pool'
+import { withMasterTx, resolveMasterActorFromRequest } from '@/lib/master-tx'
 
 export const runtime = 'nodejs'
 
@@ -47,11 +48,13 @@ function dbDown() {
   return NextResponse.json({ error: 'DATABASE_URL not configured' }, { status: 503 })
 }
 
+const FEATURE_SELECT = `id, name, description, slug, is_active, icon, priority, enabled_schools`
+
 export async function GET() {
   if (!pool) return dbDown()
   try {
     const featuresResult = await pool.query<FeatureRow>(
-      'SELECT id, name, description, slug, is_active, icon, priority, enabled_schools FROM core.features ORDER BY created_at;'
+      `SELECT ${FEATURE_SELECT} FROM core.features ORDER BY created_at;`
     )
     const schoolsResult = await pool.query<SchoolRow>(
       'SELECT id, name FROM core.schools ORDER BY id;'
@@ -69,6 +72,11 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = toggleSchema.safeParse(body)
     if (!parsed.success) {
@@ -78,26 +86,33 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const result = await pool.query<FeatureRow>(
-      `UPDATE core.features SET is_active = $2 WHERE id = $1
-       RETURNING id, name, description, slug, is_active, icon, priority, enabled_schools;`,
-      [parsed.data.id, parsed.data.is_active]
-    )
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
-    }
-
-    await logAudit({
-      action: 'feature.toggle',
-      entity_type: 'feature',
-      entity_id: parsed.data.id,
-      details: parsed.data.is_active ? 'تفعيل ميزة' : 'إيقاف ميزة',
-      severity: 'info',
+    const data = await withMasterTx(actor, async (tx) => {
+      const result = await tx.query<FeatureRow>(
+        `UPDATE core.features SET is_active = $2 WHERE id = $1
+         RETURNING ${FEATURE_SELECT};`,
+        [parsed.data.id, parsed.data.is_active]
+      )
+      if (result.rows.length === 0) {
+        throw new Error('FEATURE_NOT_FOUND')
+      }
+      return {
+        data: result.rows[0],
+        audit: {
+          action: 'feature.toggle',
+          entity_type: 'feature',
+          entity_id: parsed.data.id,
+          details: parsed.data.is_active ? 'تفعيل ميزة' : 'إيقاف ميزة',
+          severity: 'info' as const,
+        },
+      }
     })
 
-    return NextResponse.json({ data: mapFeature(result.rows[0]) })
-  } catch (err) {
+    return NextResponse.json({ data: mapFeature(data) })
+  } catch (err: unknown) {
     console.error('[master:features] PATCH failed', err)
+    if (err instanceof Error && err.message === 'FEATURE_NOT_FOUND') {
+      return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -105,6 +120,11 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = schoolSelectSchema.safeParse(body)
     if (!parsed.success) {
@@ -114,26 +134,33 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await pool.query<FeatureRow>(
-      `UPDATE core.features SET enabled_schools = $2::int[] WHERE id = $1
-       RETURNING id, name, description, slug, is_active, icon, priority, enabled_schools;`,
-      [parsed.data.id, parsed.data.school_ids]
-    )
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
-    }
-
-    await logAudit({
-      action: 'feature.schools',
-      entity_type: 'feature',
-      entity_id: parsed.data.id,
-      details: `تحديث المدارس المفعّلة (${parsed.data.school_ids.length})`,
-      severity: 'info',
+    const data = await withMasterTx(actor, async (tx) => {
+      const result = await tx.query<FeatureRow>(
+        `UPDATE core.features SET enabled_schools = $2::int[] WHERE id = $1
+         RETURNING ${FEATURE_SELECT};`,
+        [parsed.data.id, parsed.data.school_ids]
+      )
+      if (result.rows.length === 0) {
+        throw new Error('FEATURE_NOT_FOUND')
+      }
+      return {
+        data: result.rows[0],
+        audit: {
+          action: 'feature.schools',
+          entity_type: 'feature',
+          entity_id: parsed.data.id,
+          details: `تحديث المدارس المفعّلة (${parsed.data.school_ids.length})`,
+          severity: 'info' as const,
+        },
+      }
     })
 
-    return NextResponse.json({ data: mapFeature(result.rows[0]) })
-  } catch (err) {
+    return NextResponse.json({ data: mapFeature(data) })
+  } catch (err: unknown) {
     console.error('[master:features] POST failed', err)
+    if (err instanceof Error && err.message === 'FEATURE_NOT_FOUND') {
+      return NextResponse.json({ error: 'Feature not found' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

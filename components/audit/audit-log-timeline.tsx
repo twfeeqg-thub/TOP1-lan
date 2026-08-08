@@ -2,15 +2,18 @@
 
 import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Search, Filter, ChevronLeft, ChevronRight, RotateCw, Clock, Shield, Activity } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, RotateCw, Clock, Shield, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   type AuditLogEntry,
+  type AuditSeverity,
+  severityLabels,
   getSeverityColor,
   getSeverityGlow,
   getTargetTypeLabel,
   getTargetTypeColor,
-} from '@/lib/audit-log-mock-data'
+} from '@/lib/audit-log'
+import { getRandomMessage, emptyMessages } from '@/lib/psych-support'
 
 interface AuditLogTimelineProps {
   entries: AuditLogEntry[]
@@ -19,19 +22,24 @@ interface AuditLogTimelineProps {
   loading?: boolean
 }
 
-const severityLabels: Record<AuditLogEntry['severity'], string> = {
-  success: 'نجاح',
-  warning: 'تنبيه',
-  error: 'خطأ',
-  info: 'معلومة',
-}
+const filterTypeOptions = [
+  { value: 'sector', label: 'قطاعات' },
+  { value: 'project', label: 'مشاريع' },
+  { value: 'project_override', label: 'تخصيصات' },
+  { value: 'feature', label: 'ميزات' },
+  { value: 'ad', label: 'إعلانات' },
+  { value: 'ad_request', label: 'طلبات إعلان' },
+  { value: 'kill_switch', label: 'إيقاف الطوارئ' },
+  { value: 'outbox', label: 'عمليات مؤجلة' },
+]
 
 export function AuditLogTimeline({ entries, maxEntries = 50, onRefresh, loading }: AuditLogTimelineProps) {
   const [search, setSearch] = useState('')
-  const [filterType, setFilterType] = useState<AuditLogEntry['target_type'] | 'all'>('all')
-  const [filterSeverity, setFilterSeverity] = useState<AuditLogEntry['severity'] | 'all'>('all')
+  const [filterType, setFilterType] = useState<string | 'all'>('all')
+  const [filterSeverity, setFilterSeverity] = useState<AuditSeverity | 'all'>('all')
   const [page, setPage] = useState(0)
   const pageSize = 10
+  const emptyMsg = useMemo(() => getRandomMessage(emptyMessages), [])
 
   const filtered = useMemo(() => {
     let result = entries
@@ -41,7 +49,7 @@ export function AuditLogTimeline({ entries, maxEntries = 50, onRefresh, loading 
         (e) =>
           e.action.includes(q) ||
           e.actor.includes(q) ||
-          e.target_name.includes(q) ||
+          (e.target_name && e.target_name.includes(q)) ||
           (e.details && e.details.includes(q))
       )
     }
@@ -79,37 +87,34 @@ export function AuditLogTimeline({ entries, maxEntries = 50, onRefresh, loading 
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0) }}
             placeholder="بحث في السجل..."
-            className="glass-input w-full rounded-xl pr-10 pl-4 py-2.5 text-sm outline-none"
+            className="glass-input touch-target w-full rounded-xl pr-10 pl-4 min-h-[44px] text-sm outline-none"
           />
         </div>
         <select
           value={filterType}
-          onChange={(e) => { setFilterType(e.target.value as AuditLogEntry['target_type'] | 'all'); setPage(0) }}
-          className="glass-input rounded-xl px-3 py-2.5 text-sm outline-none appearance-none cursor-pointer"
+          onChange={(e) => { setFilterType(e.target.value); setPage(0) }}
+          className="glass-input touch-target rounded-xl px-3 min-h-[44px] min-w-[44px] text-sm outline-none appearance-none cursor-pointer"
         >
           <option value="all">جميع الأنواع</option>
-          <option value="project">مشاريع</option>
-          <option value="ad">إعلانات</option>
-          <option value="feature">ميزات</option>
-          <option value="user">مستخدمون</option>
-          <option value="setting">إعدادات</option>
+          {filterTypeOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
         </select>
         <select
           value={filterSeverity}
-          onChange={(e) => { setFilterSeverity(e.target.value as AuditLogEntry['severity'] | 'all'); setPage(0) }}
-          className="glass-input rounded-xl px-3 py-2.5 text-sm outline-none appearance-none cursor-pointer"
+          onChange={(e) => { setFilterSeverity(e.target.value as AuditSeverity | 'all'); setPage(0) }}
+          className="glass-input touch-target rounded-xl px-3 min-h-[44px] min-w-[44px] text-sm outline-none appearance-none cursor-pointer"
         >
           <option value="all">جميع المستويات</option>
-          <option value="success">نجاح</option>
-          <option value="warning">تنبيه</option>
-          <option value="error">خطأ</option>
-          <option value="info">معلومة</option>
+          <option value="info">{severityLabels.info}</option>
+          <option value="medium">{severityLabels.medium}</option>
+          <option value="high">{severityLabels.high}</option>
         </select>
         {onRefresh && (
           <button
             onClick={onRefresh}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium glass-card hover:border-[var(--primary)] transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 min-h-[44px] rounded-xl text-sm font-medium glass-card touch-target hover:border-[var(--primary)] transition-all disabled:opacity-50"
           >
             <RotateCw className={cn('w-4 h-4', loading && 'animate-spin')} />
             تحديث
@@ -128,19 +133,20 @@ export function AuditLogTimeline({ entries, maxEntries = 50, onRefresh, loading 
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="text-center py-12 text-[var(--text-muted)] text-sm"
+                className="flex flex-col items-center justify-center gap-2 py-12 text-center text-[var(--text-muted)] text-sm"
               >
-                لا توجد نتائج للبحث
+                <Activity className="w-8 h-8 text-[var(--text-muted)]/50" />
+                {emptyMsg}
               </motion.div>
             )}
             {paged.map((entry, i) => (
               <motion.div
                 key={entry.id}
                 layout
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ delay: i * 0.03, duration: 0.25 }}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
                 className="flex gap-4 group"
               >
                 {/* severity dot */}
@@ -153,7 +159,7 @@ export function AuditLogTimeline({ entries, maxEntries = 50, onRefresh, loading 
                     )}
                   >
                     <span className="text-[10px] text-white font-bold">
-                      {entry.severity === 'success' ? '✓' : entry.severity === 'error' ? '✕' : entry.severity === 'warning' ? '!' : 'i'}
+                      {entry.severity === 'high' ? '✕' : entry.severity === 'medium' ? '!' : 'i'}
                     </span>
                   </div>
                 </div>
@@ -202,14 +208,16 @@ export function AuditLogTimeline({ entries, maxEntries = 50, onRefresh, loading 
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={safePage === 0}
-              className="p-2 rounded-lg glass-card hover:border-[var(--primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg glass-card touch-target hover:border-[var(--primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="الصفحة السابقة"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
             <button
               onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
               disabled={safePage >= totalPages - 1}
-              className="p-2 rounded-lg glass-card hover:border-[var(--primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg glass-card touch-target hover:border-[var(--primary)] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="الصفحة التالية"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>

@@ -34,7 +34,8 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
       <div className="flex justify-center pt-2 pb-1">
         <button
           onClick={onToggle}
-          className="p-1.5 rounded-lg text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+          className="p-1.5 min-h-[44px] min-w-[44px] rounded-lg text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+          aria-label="تبديل حجم الشريط الجانبي"
         >
           {collapsed ? (
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,7 +66,7 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
                     key={jump.href}
                     href={jump.href}
                     className={cn(
-                      'flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all',
+                      'flex min-h-[44px] items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-medium transition-all touch-target',
                       'text-[var(--sidebar-text)] hover:bg-[var(--primary-light)] hover:border-[var(--primary)] border border-transparent',
                       collapsed && 'justify-center px-0'
                     )}
@@ -90,7 +91,7 @@ export function SidebarV2({ collapsed, onToggle }: SidebarV2Props) {
               key={item.id}
               href={item.href}
               className={cn(
-                'group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative whitespace-nowrap',
+                'group flex min-h-[44px] items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 relative whitespace-nowrap touch-target',
                 active
                   ? 'text-[var(--sidebar-active-text)] bg-[var(--sidebar-active-bg)]'
                   : 'text-[var(--sidebar-text-muted)] hover:text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover-bg)]',

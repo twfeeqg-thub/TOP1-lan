@@ -10,9 +10,9 @@ import { faqOpenMessages } from '@/lib/psych-support'
 export default function DynamicFAQ({ faqs }: { faqs: FAQ[] }) {
   const [openId, setOpenId] = useState<string | null>(null)
 
-  if (!faqs || faqs.length === 0) return null
-
   const faqMessages = usePsychMessages(faqOpenMessages, faqs.length)
+
+  if (!faqs || faqs.length === 0) return null
 
   const toggle = (id: string) => setOpenId((prev) => (prev === id ? null : id))
 

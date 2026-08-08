@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { motion } from 'motion/react'
+import { useState, useCallback, useMemo } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Zap,
@@ -17,6 +17,7 @@ import {
 import { GlassModal } from '@/components/ui/glass-modal'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { cn } from '@/lib/utils'
+import { getRandomMessage, loadingMessages, successMessages } from '@/lib/psych-support'
 
 const iconMap: Record<string, typeof Zap> = {
   Zap,
@@ -80,6 +81,8 @@ export default function FeaturesPage() {
   const [selectedSchools, setSelectedSchools] = useState<number[]>([])
   const queryClient = useQueryClient()
 
+  const loadingMsg = useMemo(() => getRandomMessage(loadingMessages), [])
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['master-features'],
     queryFn: fetchFeatures,
@@ -118,10 +121,12 @@ export default function FeaturesPage() {
     )
   }, [])
 
+  const schools = data?.schools
+
   const selectAllSchools = useCallback(() => {
-    if (!data?.schools) return
-    setSelectedSchools(data.schools.map((s) => s.id))
-  }, [data?.schools])
+    if (!schools) return
+    setSelectedSchools(schools.map((s) => s.id))
+  }, [schools])
 
   const deselectAllSchools = useCallback(() => {
     setSelectedSchools([])
@@ -137,8 +142,9 @@ export default function FeaturesPage() {
   return (
     <div className="space-y-6">
       {isLoading && (
-        <div className="flex justify-center py-12">
+        <div className="flex flex-col items-center justify-center gap-3 py-14">
           <Loader2 className="w-6 h-6 animate-spin text-[var(--primary)]" />
+          <p className="text-sm text-[var(--text-muted)]">{loadingMsg}</p>
         </div>
       )}
 
@@ -155,12 +161,13 @@ export default function FeaturesPage() {
             return (
               <motion.div
                 key={feature.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
+                transition={{ type: 'spring', stiffness: 100, damping: 15, delay: i * 0.04 }}
+                whileTap={{ scale: 0.99 }}
                 className={cn(
-                  'glass-card rounded-2xl p-5 group transition-all',
-                  !feature.is_active && 'opacity-60'
+                  'glass-edge rounded-2xl p-5 group transition-all motion-hover',
+                  !feature.is_active && 'opacity-70'
                 )}
               >
                 <div className="flex items-start justify-between mb-3">
@@ -198,12 +205,13 @@ export default function FeaturesPage() {
                   <div className="flex items-center gap-2">
                     <span
                       className={cn(
-                        'text-xs px-2 py-0.5 rounded-full',
+                        'pill',
                         feature.is_active
-                          ? 'bg-emerald-500/10 text-emerald-400'
+                          ? 'bg-emerald-500/10 text-emerald-500'
                           : 'bg-[var(--sidebar-hover-bg)] text-[var(--text-muted)]'
                       )}
                     >
+                      <span className={cn('status-dot', feature.is_active ? 'status-dot-active' : '')} />
                       {feature.is_active ? 'مفعّلة' : 'معطّلة'}
                     </span>
                     <span
@@ -219,7 +227,7 @@ export default function FeaturesPage() {
                 <div className="mt-3 pt-3 border-t border-[var(--sidebar-border)]">
                   <button
                     onClick={() => openSchoolModal(feature)}
-                    className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
+                    className="touch-target min-h-[44px] flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--primary)] transition-colors"
                   >
                     <School className="w-3.5 h-3.5" />
                     تفعيل لمدارس محددة
@@ -246,13 +254,13 @@ export default function FeaturesPage() {
             <div className="flex items-center justify-between pb-2 border-b border-[var(--sidebar-border)]">
               <button
                 onClick={selectAllSchools}
-                className="text-xs text-[var(--primary)] hover:underline"
+                className="touch-target min-h-[44px] text-xs text-[var(--primary)] hover:underline px-1"
               >
                 تحديد الكل
               </button>
               <button
                 onClick={deselectAllSchools}
-                className="text-xs text-[var(--text-muted)] hover:underline"
+                className="touch-target min-h-[44px] text-xs text-[var(--text-muted)] hover:underline px-1"
               >
                 إلغاء الكل
               </button>
@@ -293,14 +301,14 @@ export default function FeaturesPage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setSchoolModalId(null)}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+                className="touch-target min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
               >
                 إلغاء
               </button>
               <button
                 onClick={handleSchoolSave}
                 disabled={schoolMutation.isPending}
-                className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="touch-target min-h-[44px] flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-[var(--primary)] hover:bg-[var(--primary-hover)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {schoolMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 {schoolMutation.isPending ? 'جاري الحفظ...' : 'حفظ التحديد'}

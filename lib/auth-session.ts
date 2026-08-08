@@ -1,6 +1,11 @@
 import { NextRequest } from 'next/server';
 import { poolAdmin } from '@/lib/supabase-pool';
-import { REFRESH_COOKIE_NAME, type AuthRole } from '@/lib/auth';
+import {
+  REFRESH_COOKIE_NAME,
+  ACCESS_COOKIE_NAME,
+  verifyAccessToken,
+  type AuthRole,
+} from '@/lib/auth';
 
 export interface SessionUser {
   id: string;
@@ -61,4 +66,43 @@ export async function resolveSessionFromRequest(
     sessionId: session.id,
     expiresAt: session.expires_at,
   };
+}
+
+export interface MasterActor {
+  userId: string;
+  role: AuthRole;
+}
+
+/**
+ * Resolves the audit actor for master-panel mutations.
+ *
+ * The HttpOnly refresh cookie is path-scoped to `/api/auth`, so it never
+ * reaches `/api/master/*` handlers. Instead the actor is derived from the
+ * server-signed access token (Bearer header or `aisahl_access_token` cookie)
+ * that the middleware already verified, then confirmed live against
+ * `core.users` (is_active + authoritative role). Client-supplied identity is
+ * never trusted.
+ */
+export async function resolveMasterActorFromRequest(
+  request: NextRequest
+): Promise<MasterActor | null> {
+  const header = request.headers.get('authorization');
+  const token = header?.startsWith('Bearer ')
+    ? header.slice(7)
+    : (request.cookies.get(ACCESS_COOKIE_NAME)?.value ?? null);
+  if (!token) return null;
+
+  const payload = verifyAccessToken(token);
+  if (!payload) return null;
+
+  const { data: user } = await poolAdmin.client
+    .schema('core')
+    .from('users')
+    .select('id, role, is_active')
+    .eq('id', payload.userId)
+    .maybeSingle();
+
+  if (!user || !user.is_active) return null;
+
+  return { userId: user.id, role: user.role as AuthRole };
 }

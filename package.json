@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "seed": "tsx scripts/seed.ts",
     "seed:owner": "tsx scripts/seed-owner.ts",
+    "db:migrate:overrides": "tsx scripts/migrate-overrides.ts",
+    "db:migrate:audit2": "tsx scripts/migrate-audit-phase2.ts",
+    "db:migrate:phase3": "tsx scripts/migrate-phase3.ts",
+    "dna:update": "node scripts/generate-dna.js",
     "clean": "next clean"
   },
   "dependencies": {

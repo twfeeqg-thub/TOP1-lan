@@ -71,6 +71,19 @@ export default function ArenaPage() {
 
   const question = currentQuestion
 
+  const goNext = useCallback(() => {
+    setFeedback(null)
+    setShowExplanation(false)
+    setIsAlternative(false)
+    setCurrentQuestionAlt(null)
+
+    if (currentIndex < mockQuestions.length - 1) {
+      setCurrentIndex((i) => i + 1)
+    } else {
+      setFinished(true)
+    }
+  }, [currentIndex])
+
   const handleAnswer = useCallback(async (selectedIndex: number) => {
     if (!question || feedback) return
 
@@ -109,20 +122,7 @@ export default function ArenaPage() {
         }, 2500)
       }
     }
-  }, [question, feedback])
-
-  const goNext = () => {
-    setFeedback(null)
-    setShowExplanation(false)
-    setIsAlternative(false)
-    setCurrentQuestionAlt(null)
-
-    if (currentIndex < mockQuestions.length - 1) {
-      setCurrentIndex((i) => i + 1)
-    } else {
-      setFinished(true)
-    }
-  }
+  }, [question, feedback, goNext])
 
   if (finished) {
     const percentage = Math.round((score / mockQuestions.length) * 100)

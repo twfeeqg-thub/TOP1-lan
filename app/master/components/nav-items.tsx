@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import type { LucideIcon } from 'lucide-react'
-import { LayoutDashboard, FolderKanban, Megaphone, Zap, Grid3x3, Users, Settings } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, Megaphone, Zap, Grid3x3, FilePlus2 } from 'lucide-react'
 import type { AuthRole } from '@/lib/auth'
 
 export interface NavItem {
@@ -20,8 +20,7 @@ export const navItems: NavItem[] = [
   { id: 'ads', labelAr: 'الإعلانات', labelEn: 'Ads', href: '/master/ads', icon: Megaphone, roles: ['super_admin', 'master'] },
   { id: 'features', labelAr: 'الميزات', labelEn: 'Features', href: '/master/features', icon: Zap, roles: ['super_admin', 'master'] },
   { id: 'sectors', labelAr: 'القطاعات', labelEn: 'Sectors', href: '/master/sectors', icon: Grid3x3, roles: ['super_admin', 'master'] },
-  { id: 'users', labelAr: 'المستخدمون', labelEn: 'Users', href: '/master/users', icon: Users, roles: ['super_admin'] },
-  { id: 'settings', labelAr: 'الإعدادات', labelEn: 'Settings', href: '/master/settings', icon: Settings, roles: ['super_admin', 'master'] },
+  { id: 'forms', labelAr: 'إنشاء جديد', labelEn: 'Create', href: '/master/forms', icon: FilePlus2, roles: ['super_admin', 'master'] },
 ]
 
 export function getNavItems(role?: string | null): NavItem[] {

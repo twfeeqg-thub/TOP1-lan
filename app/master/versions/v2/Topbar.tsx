@@ -23,27 +23,29 @@ export function TopbarV2() {
       <div className="flex items-center gap-3">
         <ThemeSwitcher />
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-default">
+        <div className="flex items-center gap-2 px-3 py-1.5 min-h-[44px] rounded-lg hover:bg-[var(--sidebar-hover-bg)] transition-colors cursor-default">
           <div className="w-7 h-7 rounded-full bg-[var(--sidebar-active-bg)] flex items-center justify-center">
             <span className="text-[var(--sidebar-active-text)] text-xs font-bold">
               {(user?.name || 'A')[0]}
             </span>
           </div>
-          <span className="text-sm text-[var(--text-muted)]">{user?.name || 'Admin'}</span>
+          <span className="text-sm text-[var(--text-muted)] hidden sm:inline">{user?.name || 'Admin'}</span>
         </div>
 
         <button
           onClick={() => setProfileOpen(true)}
-          className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
+          className="touch-target min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--primary)] hover:bg-[var(--sidebar-hover-bg)] transition-all"
           title={lang === 'ar' ? 'تعديل بيانات الحساب' : 'Edit account settings'}
+          aria-label={lang === 'ar' ? 'تعديل بيانات الحساب' : 'Edit account settings'}
         >
           <UserCog className="w-4 h-4" />
         </button>
 
         <button
           onClick={logout}
-          className="p-2 rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
+          className="touch-target min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-red-400 hover:bg-red-500/10 transition-all"
           title={lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}
+          aria-label={lang === 'ar' ? 'تسجيل الخروج' : 'Logout'}
         >
           <LogOut className="w-4 h-4" />
         </button>

@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
         phone: resolved.user.phone,
         name: resolved.user.name,
         role: resolved.user.role,
+        tenant_id:
+          resolved.user.metadata && typeof resolved.user.metadata['tenant_id'] === 'string'
+            ? (resolved.user.metadata['tenant_id'] as string)
+            : null,
       },
       subscriptions,
       access_token: accessToken,

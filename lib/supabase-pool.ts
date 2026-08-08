@@ -27,7 +27,10 @@ export interface AuditLogEntry {
   entity_type?: string | null;
   entity_id?: string | null;
   details?: string | null;
-  severity?: string | null;
+  severity?: 'info' | 'medium' | 'high' | null;
+  actor_role?: string | null;
+  performed_at?: string | null;
+  client_mutation_id?: string | null;
 }
 
 export async function logAudit(entry: AuditLogEntry): Promise<void> {
@@ -38,8 +41,9 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
   try {
     await pool.query(
       `INSERT INTO core.master_audit_log
-         (action, user_id, entity_type, entity_id, details, severity)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+         (action, user_id, entity_type, entity_id, details, severity,
+          actor_role, performed_at, client_mutation_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         entry.action,
         entry.user_id ?? null,
@@ -47,6 +51,9 @@ export async function logAudit(entry: AuditLogEntry): Promise<void> {
         entry.entity_id ?? null,
         entry.details ?? null,
         entry.severity ?? 'info',
+        entry.actor_role ?? null,
+        entry.performed_at ?? new Date().toISOString(),
+        entry.client_mutation_id ?? null,
       ],
     );
   } catch (err) {

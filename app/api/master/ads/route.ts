@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { pool, logAudit } from '@/lib/supabase-pool'
+import { pool } from '@/lib/supabase-pool'
+import { withMasterTx, resolveMasterActorFromRequest } from '@/lib/master-tx'
 import type { Ad } from '@/lib/ad-types'
 
 export const runtime = 'nodejs'
@@ -54,6 +55,9 @@ interface AdRow {
   created_at: Date
 }
 
+const AD_SELECT = `id, ad_config, campaign_name, media_url, request_id, status, is_active,
+                   clicks, impressions, budget, platform, created_at`
+
 function mapRow(row: AdRow): Ad {
   return {
     id: row.id,
@@ -77,9 +81,7 @@ export async function GET() {
   if (!pool) return dbDown()
   try {
     const result = await pool.query<AdRow>(
-      `SELECT id, ad_config, campaign_name, media_url, request_id, status, is_active,
-              clicks, impressions, budget, platform, created_at
-       FROM core.ads_engine ORDER BY created_at DESC;`
+      `SELECT ${AD_SELECT} FROM core.ads_engine ORDER BY created_at DESC;`
     )
     return NextResponse.json({ data: result.rows.map(mapRow) })
   } catch (err) {
@@ -91,6 +93,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = createAdSchema.safeParse(body)
     if (!parsed.success) {
@@ -100,29 +107,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await pool.query<AdRow>(
-      `INSERT INTO core.ads_engine (campaign_name, ad_config, media_url, request_id, status, is_active)
-       VALUES ($1, $2::jsonb, $3, $4, $5, $5 = 'active')
-       RETURNING id, ad_config, campaign_name, media_url, request_id, status, is_active,
-                 clicks, impressions, budget, platform, created_at;`,
-      [
-        parsed.data.ad_config.title,
-        JSON.stringify(parsed.data.ad_config),
-        parsed.data.media_url ?? null,
-        parsed.data.request_id ?? null,
-        parsed.data.status,
-      ]
-    )
-
-    await logAudit({
-      action: 'ad.create',
-      entity_type: 'ad',
-      entity_id: result.rows[0].id,
-      details: `إنشاء إعلان "${parsed.data.ad_config.title}"`,
-      severity: 'info',
+    const data = await withMasterTx(actor, async (tx) => {
+      const result = await tx.query<AdRow>(
+        `INSERT INTO core.ads_engine (campaign_name, ad_config, media_url, request_id, status, is_active)
+         VALUES ($1, $2::jsonb, $3, $4, $5, $5 = 'active')
+         RETURNING ${AD_SELECT};`,
+        [
+          parsed.data.ad_config.title,
+          JSON.stringify(parsed.data.ad_config),
+          parsed.data.media_url ?? null,
+          parsed.data.request_id ?? null,
+          parsed.data.status,
+        ]
+      )
+      return {
+        data: result.rows[0],
+        audit: {
+          action: 'ad.create',
+          entity_type: 'ad',
+          entity_id: result.rows[0].id,
+          details: `إنشاء إعلان "${parsed.data.ad_config.title}"`,
+          severity: 'info' as const,
+        },
+      }
     })
 
-    return NextResponse.json({ data: mapRow(result.rows[0]) }, { status: 201 })
+    return NextResponse.json({ data: mapRow(data) }, { status: 201 })
   } catch (err) {
     console.error('[master:ads] POST failed', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -132,6 +142,11 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = updateAdSchema.safeParse(body)
     if (!parsed.success) {
@@ -143,47 +158,53 @@ export async function PATCH(request: NextRequest) {
 
     const { id, ad_config, ...rest } = parsed.data
 
-    const existing = await pool.query<AdRow>('SELECT ad_config FROM core.ads_engine WHERE id = $1;', [id])
-    if (existing.rows.length === 0) {
-      return NextResponse.json({ error: 'Ad not found' }, { status: 404 })
-    }
+    const data = await withMasterTx(actor, async (tx) => {
+      const existing = await tx.query<AdRow>('SELECT ad_config FROM core.ads_engine WHERE id = $1;', [id])
+      if (existing.rows.length === 0) {
+        throw new Error('AD_NOT_FOUND')
+      }
 
-    const mergedConfig = ad_config
-      ? { ...(existing.rows[0].ad_config ?? {}), ...ad_config }
-      : existing.rows[0].ad_config
+      const mergedConfig = ad_config
+        ? { ...(existing.rows[0].ad_config ?? {}), ...ad_config }
+        : existing.rows[0].ad_config
 
-    const result = await pool.query<AdRow>(
-      `UPDATE core.ads_engine
-       SET ad_config = $2::jsonb,
-           media_url = COALESCE($3, media_url),
-           status = COALESCE($4, status),
-           is_active = COALESCE($4, status) = 'active',
-           campaign_name = COALESCE($5, campaign_name)
-       WHERE id = $1
-       RETURNING id, ad_config, campaign_name, media_url, request_id, status, is_active,
-                 clicks, impressions, budget, platform, created_at;`,
-      [
-        id,
-        JSON.stringify(mergedConfig),
-        rest.media_url ?? null,
-        rest.status ?? null,
-        typeof mergedConfig === 'object' && mergedConfig && 'title' in mergedConfig
-          ? (mergedConfig as any).title
-          : null,
-      ]
-    )
-
-    await logAudit({
-      action: 'ad.update',
-      entity_type: 'ad',
-      entity_id: id,
-      details: 'تحديث الإعلان',
-      severity: 'info',
+      const result = await tx.query<AdRow>(
+        `UPDATE core.ads_engine
+         SET ad_config = $2::jsonb,
+             media_url = COALESCE($3, media_url),
+             status = COALESCE($4, status),
+             is_active = COALESCE($4, status) = 'active',
+             campaign_name = COALESCE($5, campaign_name)
+         WHERE id = $1
+         RETURNING ${AD_SELECT};`,
+        [
+          id,
+          JSON.stringify(mergedConfig),
+          rest.media_url ?? null,
+          rest.status ?? null,
+          typeof mergedConfig === 'object' && mergedConfig && 'title' in mergedConfig
+            ? (mergedConfig as any).title
+            : null,
+        ]
+      )
+      return {
+        data: result.rows[0],
+        audit: {
+          action: 'ad.update',
+          entity_type: 'ad',
+          entity_id: id,
+          details: 'تحديث الإعلان',
+          severity: 'info' as const,
+        },
+      }
     })
 
-    return NextResponse.json({ data: mapRow(result.rows[0]) })
-  } catch (err) {
+    return NextResponse.json({ data: mapRow(data) })
+  } catch (err: unknown) {
     console.error('[master:ads] PATCH failed', err)
+    if (err instanceof Error && err.message === 'AD_NOT_FOUND') {
+      return NextResponse.json({ error: 'Ad not found' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

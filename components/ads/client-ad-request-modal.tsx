@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, type ChangeEvent } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
+import Image from 'next/image'
 import { X, Upload, ImageIcon, FileText, Loader2, CheckCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AdPackage, CtaType } from '@/lib/ad-types'
@@ -312,7 +313,7 @@ export function ClientAdRequestModal({ open, onClose }: ClientAdRequestModalProp
                       />
                       {cardPreview ? (
                         <div className="relative rounded-xl overflow-hidden border border-[var(--card-border)]">
-                          <img src={cardPreview} alt="Card preview" className="w-full h-28 object-cover" />
+                          <Image src={cardPreview} alt="Card preview" width={640} height={112} sizes="(max-width: 768px) 100vw, 640px" loading="lazy" decoding="async" unoptimized className="w-full h-28 object-cover" />
                           <button
                             type="button"
                             onClick={() => removeFile('card')}
@@ -352,7 +353,7 @@ export function ClientAdRequestModal({ open, onClose }: ClientAdRequestModalProp
                       />
                       {paymentPreview ? (
                         <div className="relative rounded-xl overflow-hidden border border-[var(--card-border)]">
-                          <img src={paymentPreview} alt="Payment proof" className="w-full h-28 object-cover" />
+                          <Image src={paymentPreview} alt="Payment proof" width={640} height={112} sizes="(max-width: 768px) 100vw, 640px" loading="lazy" decoding="async" unoptimized className="w-full h-28 object-cover" />
                           <button
                             type="button"
                             onClick={() => removeFile('payment')}

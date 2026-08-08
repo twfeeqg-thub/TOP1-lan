@@ -7,9 +7,9 @@ import { usePsychMessage } from '@/hooks/use-psych-message'
 import { farewellMessages } from '@/lib/psych-support'
 
 export default function DynamicLegalFooter({ legal_footer }: { legal_footer: LegalFooter }) {
-  if (!legal_footer) return null
-
   const farewellMsg = usePsychMessage(farewellMessages)
+
+  if (!legal_footer) return null
 
   return (
     <motion.footer

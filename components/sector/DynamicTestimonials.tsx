@@ -10,10 +10,11 @@ import { appreciationMessages } from '@/lib/psych-support'
 export default function DynamicTestimonials({ testimonials }: { testimonials: Testimonial[] }) {
   const [activeIndex, setActiveIndex] = useState(0)
 
+  const appreciationMsg = usePsychMessage(appreciationMessages)
+
   if (!testimonials || testimonials.length === 0) return null
 
   const current = testimonials[activeIndex]
-  const appreciationMsg = usePsychMessage(appreciationMessages)
 
   const goNext = () => setActiveIndex((prev) => (prev + 1) % testimonials.length)
   const goPrev = () => setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)

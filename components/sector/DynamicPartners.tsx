@@ -6,9 +6,9 @@ import { usePsychMessage } from '@/hooks/use-psych-message'
 import { trustMessages } from '@/lib/psych-support'
 
 export default function DynamicPartners({ partners }: { partners: Partner[] }) {
-  if (!partners || partners.length === 0) return null
-
   const trustMsg = usePsychMessage(trustMessages)
+
+  if (!partners || partners.length === 0) return null
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">

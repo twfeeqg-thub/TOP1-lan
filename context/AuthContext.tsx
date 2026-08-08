@@ -1,12 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { db } from '@/lib/db';
 
 export interface AuthUser {
   id: string;
   phone: string;
   name?: string | null;
   role: 'user' | 'master' | 'super_admin';
+  tenant_id?: string | null;
 }
 
 interface AuthContextType {
@@ -110,6 +112,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {}
     document.cookie = 'aisahl_access_token=; path=/; max-age=0'
+
+    // LOCAL CACHE ISOLATION — never leak another user's tenant configs or
+    // pending overrides on a shared mobile device. Wipes every cached table
+    // in the Dexie/IndexedDB instance (config caches + offline mutations).
+    try {
+      await Promise.all([db.projects.clear(), db.outbox.clear()]);
+    } catch {}
+
     setAccessToken(null);
     setUser(null);
     setSubscriptions([]);

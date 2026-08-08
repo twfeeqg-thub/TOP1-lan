@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { pool, logAudit } from '@/lib/supabase-pool'
+import { pool } from '@/lib/supabase-pool'
+import { withMasterTx, resolveMasterActorFromRequest } from '@/lib/master-tx'
 import type { AdRequest } from '@/lib/ad-types'
 
 export const runtime = 'nodejs'
@@ -44,6 +45,8 @@ interface RequestRow {
   updated_at: Date | null
 }
 
+const REQUEST_SELECT = `id, client_info, campaign, attachments, design_request, status, created_at, updated_at`
+
 function mapRow(row: RequestRow): AdRequest {
   return {
     id: row.id,
@@ -67,8 +70,7 @@ export async function GET() {
   if (!pool) return dbDown()
   try {
     const result = await pool.query<RequestRow>(
-      `SELECT id, client_info, campaign, attachments, design_request, status, created_at, updated_at
-       FROM core.ad_requests ORDER BY created_at DESC;`
+      `SELECT ${REQUEST_SELECT} FROM core.ad_requests ORDER BY created_at DESC;`
     )
     return NextResponse.json({ data: result.rows.map(mapRow) })
   } catch (err) {
@@ -80,6 +82,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = createRequestSchema.safeParse(body)
     if (!parsed.success) {
@@ -90,20 +97,32 @@ export async function POST(request: NextRequest) {
     }
 
     const id = `req-${Date.now()}`
-    const result = await pool.query<RequestRow>(
-      `INSERT INTO core.ad_requests (id, client_info, campaign, attachments, design_request, status)
-       VALUES ($1, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, 'pending')
-       RETURNING id, client_info, campaign, attachments, design_request, status, created_at, updated_at;`,
-      [
-        id,
-        JSON.stringify(parsed.data.client_info),
-        JSON.stringify(parsed.data.campaign),
-        JSON.stringify(parsed.data.attachments),
-        parsed.data.design_request ? JSON.stringify(parsed.data.design_request) : null,
-      ]
-    )
+    const data = await withMasterTx(actor, async (tx) => {
+      const result = await tx.query<RequestRow>(
+        `INSERT INTO core.ad_requests (id, client_info, campaign, attachments, design_request, status)
+         VALUES ($1, $2::jsonb, $3::jsonb, $4::jsonb, $5::jsonb, 'pending')
+         RETURNING ${REQUEST_SELECT};`,
+        [
+          id,
+          JSON.stringify(parsed.data.client_info),
+          JSON.stringify(parsed.data.campaign),
+          JSON.stringify(parsed.data.attachments),
+          parsed.data.design_request ? JSON.stringify(parsed.data.design_request) : null,
+        ]
+      )
+      return {
+        data: result.rows[0],
+        audit: {
+          action: 'ad_request.create',
+          entity_type: 'ad_request',
+          entity_id: id,
+          details: `تسجيل طلب إعلان "${parsed.data.client_info.business_name}"`,
+          severity: 'info' as const,
+        },
+      }
+    })
 
-    return NextResponse.json({ data: mapRow(result.rows[0]) }, { status: 201 })
+    return NextResponse.json({ data: mapRow(data) }, { status: 201 })
   } catch (err) {
     console.error('[master:ad-requests] POST failed', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -113,6 +132,11 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const body = await request.json()
     const parsed = updateRequestSchema.safeParse(body)
     if (!parsed.success) {
@@ -122,27 +146,34 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    const result = await pool.query<RequestRow>(
-      `UPDATE core.ad_requests SET status = $2, updated_at = now()
-       WHERE id = $1
-       RETURNING id, client_info, campaign, attachments, design_request, status, created_at, updated_at;`,
-      [parsed.data.id, parsed.data.status]
-    )
-    if (result.rows.length === 0) {
-      return NextResponse.json({ error: 'Request not found' }, { status: 404 })
-    }
-
-    await logAudit({
-      action: 'ad_request.review',
-      entity_type: 'ad_request',
-      entity_id: parsed.data.id,
-      details: parsed.data.status === 'approved' ? 'الموافقة على طلب إعلان' : 'رفض طلب إعلان',
-      severity: parsed.data.status === 'approved' ? 'info' : 'warn',
+    const data = await withMasterTx(actor, async (tx) => {
+      const result = await tx.query<RequestRow>(
+        `UPDATE core.ad_requests SET status = $2, updated_at = now()
+         WHERE id = $1
+         RETURNING ${REQUEST_SELECT};`,
+        [parsed.data.id, parsed.data.status]
+      )
+      if (result.rows.length === 0) {
+        throw new Error('REQUEST_NOT_FOUND')
+      }
+      return {
+        data: result.rows[0],
+        audit: {
+          action: 'ad_request.review',
+          entity_type: 'ad_request',
+          entity_id: parsed.data.id,
+          details: parsed.data.status === 'approved' ? 'الموافقة على طلب إعلان' : 'رفض طلب إعلان',
+          severity: parsed.data.status === 'approved' ? ('info' as const) : ('medium' as const),
+        },
+      }
     })
 
-    return NextResponse.json({ data: mapRow(result.rows[0]) })
-  } catch (err) {
+    return NextResponse.json({ data: mapRow(data) })
+  } catch (err: unknown) {
     console.error('[master:ad-requests] PATCH failed', err)
+    if (err instanceof Error && err.message === 'REQUEST_NOT_FOUND') {
+      return NextResponse.json({ error: 'Request not found' }, { status: 404 })
+    }
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

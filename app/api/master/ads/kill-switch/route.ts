@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { pool, logAudit } from '@/lib/supabase-pool'
+import { resolveMasterActorFromRequest } from '@/lib/auth-session'
 import type { KillSwitchState } from '@/lib/ad-types'
 
 export const runtime = 'nodejs'
@@ -37,9 +38,14 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   if (!pool) return dbDown()
   try {
+    const actor = await resolveMasterActorFromRequest(request)
+    if (!actor) {
+      return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+    }
+
     const result = await pool.query<KillSwitchRow>(
       `UPDATE core.kill_switch
        SET active = NOT active, toggled_at = now()
@@ -55,7 +61,9 @@ export async function POST() {
       entity_type: 'kill_switch',
       entity_id: 'true',
       details: result.rows[0].active ? 'تفعيل Kill Switch' : 'إيقاف Kill Switch',
-      severity: result.rows[0].active ? 'warn' : 'info',
+      severity: result.rows[0].active ? 'medium' : 'info',
+      user_id: actor.userId,
+      actor_role: actor.role,
     })
 
     return NextResponse.json({ data: mapRow(result.rows[0]) })

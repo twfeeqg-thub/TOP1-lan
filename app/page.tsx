@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   GraduationCap,
   HeartPulse,
@@ -221,6 +222,7 @@ function mapProjectToSectorId(project: { sector_name?: string; project_slug?: st
 }
 
 export default function LandingPage() {
+  const router = useRouter();
   const { theme, lang, toggleTheme, toggleLang } = useApp();
   const { user, isAuthenticated, subscriptions, logout } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
@@ -251,6 +253,7 @@ export default function LandingPage() {
       title: config.title_ar || slug,
       description: config.description_ar || '',
       icon: config.icon || 'Layers',
+      customizeUrl: user?.tenant_id && projectSlug ? `/client/${user.tenant_id}/${projectSlug}` : null,
     };
   });
 
@@ -274,7 +277,7 @@ export default function LandingPage() {
   // Handle Sector Actions
   const handleSectorClick = (sector: any) => {
     if (sector.isActive && sector.linkUrl) {
-      window.location.href = sector.linkUrl;
+      router.push(sector.linkUrl);
     } else {
       setSelectedSector(sector);
       setSuggestion('');
@@ -583,6 +586,15 @@ export default function LandingPage() {
                       <span className="w-full py-3 px-4 rounded-xl font-bold text-xs text-center bg-slate-500/10 text-slate-500 border border-white/5">
                         {lang === 'ar' ? 'قيد التشغيل' : 'Coming Soon'}
                       </span>
+                    )}
+                    {p.customizeUrl && (
+                      <Link
+                        href={p.customizeUrl}
+                        className="w-full py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 glass-button border border-white/10 hover:bg-[var(--primary-light)] text-[var(--text-main)] transition-all"
+                      >
+                        <PenLine className="w-4 h-4" style={{ color: 'var(--primary)' }} />
+                        <span>{lang === 'ar' ? 'تخصيص المشروع' : 'Customize Project'}</span>
+                      </Link>
                     )}
                   </div>
                 ))}
